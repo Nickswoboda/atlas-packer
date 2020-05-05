@@ -25,13 +25,12 @@ FileDialog::FileDialog(int width)
 
 void FileDialog::Render()
 {
-	ImGui::TextWrapped("File Dialog");
 	ImGui::TextWrapped(current_file_path_.c_str());
 
 	std::filesystem::path path = current_file_path_;
 
 	if (prev_paths_.empty()) {
-		ImGui::BeginChildFrame(1, { width_ - 5.0f, 300 });
+		ImGui::BeginChildFrame(1, { width_ / 2.0f, 200 });
 		int index = 0;
 		for (const auto& drive : drives_) {
 			if (ImGui::Selectable(drive.c_str(), index_selected_ == index, ImGuiSelectableFlags_AllowDoubleClick)) {
@@ -56,15 +55,14 @@ void FileDialog::Render()
 				return;
 			}
 
-			ImGui::BeginChildFrame(1, { width_ - 5.0f, 300 });
+			ImGui::BeginChildFrame(1, { width_ /2.0f, 200 });
 
 			int index = 0;
 			for (auto& p : std::filesystem::directory_iterator(path, std::filesystem::directory_options::skip_permission_denied)) {
-				if (p.is_directory()) {
-
+				if (p.is_directory() || p.path().extension() == ".png" || p.path().extension() == ".jpg")
 					if (ImGui::Selectable(p.path().filename().u8string().c_str(), index_selected_ == index, ImGuiSelectableFlags_AllowDoubleClick)) {
 
-						if (ImGui::IsMouseDoubleClicked(0)) {
+						if (ImGui::IsMouseDoubleClicked(0) && p.is_directory()) {
 							prev_paths_.push(current_file_path_);
 							current_file_path_ = p.path().u8string();
 						}
@@ -72,8 +70,7 @@ void FileDialog::Render()
 						index_selected_ = index;
 						selected_path_ = p.path();
 					}
-				}
-
+				
 				++index;
 			}
 
@@ -82,6 +79,22 @@ void FileDialog::Render()
 		catch (std::filesystem::filesystem_error & error) {};
 	}
 
+	ImGui::SameLine();
+	ImGui::BeginChildFrame(2, { width_ / 2.0f, 200 });
+	int index = 0;
+	for (auto& item : selected_items_) {
+
+		if (ImGui::Selectable(item.c_str(), index_selected_ == index)) {
+			index_selected_ = index;
+		}
+		++index;
+	}
+	ImGui::EndChildFrame();
+
+	ImGui::TextWrapped("Selected:");
+	ImGui::SameLine();
+	ImGui::TextWrapped(selected_path_.filename().u8string().c_str());
+
 	if (ImGui::Button("Prev")) {
 		if (!prev_paths_.empty()) {
 			current_file_path_ = prev_paths_.top();
@@ -89,10 +102,9 @@ void FileDialog::Render()
 		}
 	}
 	ImGui::SameLine();
-	if (ImGui::Button("Select")) {
+	if (ImGui::Button("Add")) {
 		if (!selected_path_.empty()) {
-			folder_path_ = selected_path_.u8string();
-			done_ = true;
+			selected_items_.push_back(selected_path_.u8string());
 		}
 	}
 }

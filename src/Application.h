@@ -25,6 +25,8 @@ public:
 	void Update();
 	void Render();
 
+	void RenderInputState();
+	void RenderOutputState();
 	void RenderSettingsMenu();
 
 	void PushState(State state);
@@ -43,4 +45,8 @@ private:
 	std::unique_ptr<FileDialog> file_dialog_;
 
 	std::stack<State> state_stack_;
+
+	int pixel_padding_ = 0;
+	bool pow_of_2 = false;
+	
 };

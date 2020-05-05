@@ -20,6 +20,5 @@ public:
 	std::stack<std::string> prev_paths_;
 	std::filesystem::path selected_path_;
 	std::string folder_path_;
-
-	bool done_ = false;
+	std::vector<std::string> selected_items_;
 };
