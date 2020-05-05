@@ -1,5 +1,7 @@
 #include "Application.h"
 
+#include "ImageData.h"
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
@@ -131,9 +133,10 @@ void Application::RenderInputState()
 
 	ImGui::Text("Power of 2: ");
 	ImGui::SameLine();
-	ImGui::Checkbox("##Powof2", &pow_of_2);
+	ImGui::Checkbox("##Powof2", &pow_of_2_);
 
 	if (ImGui::Button("Submit")) {
+		atlas_texture_ = CreateAtlas(file_dialog_->input_items_, pixel_padding_, pow_of_2_);
 		PushState(State::Output);
 	}
 }
@@ -142,6 +145,9 @@ void Application::RenderOutputState()
 {
 	ImGui::Text("Preview");
 
+	for (auto& tex : temp_images_) {
+		ImGui::Image((void*)(intptr_t)tex, { 200, 200 });
+	}
 
 	if (ImGui::Button("Save")) {
 
@@ -178,6 +184,8 @@ void Application::RenderSettingsMenu()
 	if (ImGui::Button("Return")) {
 		PopState();
 	}
+
+
 
 }
 
@@ -217,6 +225,35 @@ void Application::SetKeyCallbacks()
 
 		auto* app = (Application*)glfwGetWindowUserPointer(Window::glfw_window_);
 	});
+}
+
+std::vector<unsigned int> CreateTextures(std::vector<ImageData>& images)
+{
+	std::vector<unsigned int> images_vec;
+	for (auto& image : images) {
+		unsigned int image_texture;
+		glGenTextures(1, &image_texture);
+		glBindTexture(GL_TEXTURE_2D, image_texture);
+
+		// Setup filtering parameters for display
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+		// Upload pixels into texture
+		glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image.width_, image.height_, 0, GL_RGBA, GL_UNSIGNED_BYTE, image.data_);
+
+		images_vec.emplace_back(image_texture);
+	}
+
+	return images_vec;
+}
+
+unsigned int Application::CreateAtlas(const std::unordered_set<std::string>& paths, int padding, bool pow_of_2)
+{
+	std::vector<ImageData> image_data = GetImageData(paths);
+	temp_images_ = CreateTextures(image_data);
+	return -1;
 }
 
 

@@ -32,15 +32,16 @@ void FileDialog::Render()
 	if (prev_paths_.empty()) {
 		ImGui::BeginChildFrame(1, { width_ / 2.0f, 200 });
 		int index = 0;
+		static int selected_index = -1;
 		for (const auto& drive : drives_) {
-			if (ImGui::Selectable(drive.c_str(), index_selected_ == index, ImGuiSelectableFlags_AllowDoubleClick)) {
+			if (ImGui::Selectable(drive.c_str(), selected_index == index, ImGuiSelectableFlags_AllowDoubleClick)) {
 
 				if (ImGui::IsMouseDoubleClicked(0)) {
 					prev_paths_.push(drive);
 					current_file_path_ = drive;
 				}
 
-				index_selected_ = index;
+				selected_index = index;
 				selected_path_ = drive;
 			}
 			++index;
@@ -58,16 +59,17 @@ void FileDialog::Render()
 			ImGui::BeginChildFrame(1, { width_ /2.0f, 200 });
 
 			int index = 0;
+			static int selected_index = -1;
 			for (auto& p : std::filesystem::directory_iterator(path, std::filesystem::directory_options::skip_permission_denied)) {
 				if (p.is_directory() || p.path().extension() == ".png" || p.path().extension() == ".jpg")
-					if (ImGui::Selectable(p.path().filename().u8string().c_str(), index_selected_ == index, ImGuiSelectableFlags_AllowDoubleClick)) {
+					if (ImGui::Selectable(p.path().filename().u8string().c_str(), selected_index == index, ImGuiSelectableFlags_AllowDoubleClick)) {
 
 						if (ImGui::IsMouseDoubleClicked(0) && p.is_directory()) {
 							prev_paths_.push(current_file_path_);
 							current_file_path_ = p.path().u8string();
 						}
 
-						index_selected_ = index;
+						selected_index = index;
 						selected_path_ = p.path();
 					}
 				
@@ -82,18 +84,16 @@ void FileDialog::Render()
 	ImGui::SameLine();
 	ImGui::BeginChildFrame(2, { width_ / 2.0f, 200 });
 	int index = 0;
-	for (auto& item : selected_items_) {
+	static int selected_index = -1;
+	for (auto& item : input_items_) {
 
-		if (ImGui::Selectable(item.c_str(), index_selected_ == index)) {
-			index_selected_ = index;
+		if (ImGui::Selectable(item.c_str(), selected_index == index)) {
+			selected_index = index;
+			selected_input_item_ = item.c_str();
 		}
 		++index;
 	}
 	ImGui::EndChildFrame();
-
-	ImGui::TextWrapped("Selected:");
-	ImGui::SameLine();
-	ImGui::TextWrapped(selected_path_.filename().u8string().c_str());
 
 	if (ImGui::Button("Prev")) {
 		if (!prev_paths_.empty()) {
@@ -104,8 +104,21 @@ void FileDialog::Render()
 	ImGui::SameLine();
 	if (ImGui::Button("Add")) {
 		if (!selected_path_.empty()) {
-			selected_items_.push_back(selected_path_.u8string());
+			input_items_.insert(selected_path_.u8string());
 		}
 	}
+
+	ImGui::SameLine(width_ / 2.0f);
+	if (ImGui::Button("Remove")) {
+		input_items_.erase(selected_input_item_);
+		selected_index = -1;
+	}
+	ImGui::SameLine();
+	if (ImGui::Button("Clear All")) {
+		if (!selected_path_.empty()) {
+			input_items_.clear();
+		}
+	}
+
 }
 
