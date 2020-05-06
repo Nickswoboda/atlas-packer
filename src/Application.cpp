@@ -136,6 +136,10 @@ void Application::RenderInputState()
 	ImGui::Checkbox("##Powof2", &pow_of_2_);
 
 	if (ImGui::Button("Submit")) {
+		file_dialog_->input_items_.insert("C:/Users/Nick/bitmap.png");
+		file_dialog_->input_items_.insert("C:/Users/Nick/bluepassive.png");
+		file_dialog_->input_items_.insert("C:/Users/Nick/boots.png");
+		file_dialog_->input_items_.insert("C:/Users/Nick/greypassive.png");
 		atlas_texture_ = CreateAtlas(file_dialog_->input_items_, pixel_padding_, pow_of_2_);
 		PushState(State::Output);
 	}
@@ -145,9 +149,7 @@ void Application::RenderOutputState()
 {
 	ImGui::Text("Preview");
 
-	for (auto& tex : temp_images_) {
-		ImGui::Image((void*)(intptr_t)tex, { 200, 200 });
-	}
+	ImGui::Image((void*)(intptr_t)atlas_texture_, { atlas_width_, atlas_height_ });
 
 	if (ImGui::Button("Save")) {
 
@@ -227,33 +229,63 @@ void Application::SetKeyCallbacks()
 	});
 }
 
-std::vector<unsigned int> CreateTextures(std::vector<ImageData>& images)
+ImageData CombineAtlas(const std::vector<ImageData>& images)
 {
-	std::vector<unsigned int> images_vec;
+	int tex_width = 128;
+	int tex_height = 256;
+	int channels = 4;
+	int atlas_pitch = tex_width * channels;
+	
+	unsigned char* pixels = (unsigned char*)calloc((size_t)tex_height * atlas_pitch, 1);
+	int pen_x = 0, pen_y = 0;
+	
 	for (auto& image : images) {
-		unsigned int image_texture;
-		glGenTextures(1, &image_texture);
-		glBindTexture(GL_TEXTURE_2D, image_texture);
 
-		// Setup filtering parameters for display
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		int image_pitch = image.width_ * channels;
+		if (pen_x + image_pitch >= atlas_pitch) {
+			pen_x = 0;
+			pen_y += image.height_ * 2;
+		}
 
-		// Upload pixels into texture
-		glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image.width_, image.height_, 0, GL_RGBA, GL_UNSIGNED_BYTE, image.data_);
+		for (int row = 0; row < image.height_; ++row) {
+			for (int col = 0; col < image_pitch; ++col) {
+				int x = pen_x + col;
+				int y = pen_y + row;
+				pixels[y * (atlas_pitch) + x] = image.data_[row * (image_pitch) + col];
+			}
+		}
 
-		images_vec.emplace_back(image_texture);
+		pen_x += image_pitch;
 	}
+	
+	return ImageData{ tex_width, tex_height, pixels };
+	
+}
 
-	return images_vec;
+unsigned int CreateTexture(ImageData& image)
+{
+	unsigned int image_texture;
+	glGenTextures(1, &image_texture);
+	glBindTexture(GL_TEXTURE_2D, image_texture);
+
+	// Setup filtering parameters for display
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	// Upload pixels into texture
+	glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image.width_, image.height_, 0, GL_RGBA, GL_UNSIGNED_BYTE, image.data_);
+
+	return image_texture;
 }
 
 unsigned int Application::CreateAtlas(const std::unordered_set<std::string>& paths, int padding, bool pow_of_2)
 {
-	std::vector<ImageData> image_data = GetImageData(paths);
-	temp_images_ = CreateTextures(image_data);
-	return -1;
+	std::vector<ImageData> image_data = GetImageData(paths); 
+	auto atlas = CombineAtlas(image_data);
+	atlas_width_ = atlas.width_;
+	atlas_height_ = atlas.height_;
+	return CreateTexture(atlas);
 }
 
 
