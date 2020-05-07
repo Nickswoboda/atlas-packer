@@ -3,6 +3,7 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
+#include <filesystem>
 #include <iostream>
 
 std::vector<ImageData> GetImageData(const std::unordered_set<std::string>& paths)
@@ -17,8 +18,9 @@ std::vector<ImageData> GetImageData(const std::unordered_set<std::string>& paths
 		if (data == nullptr) {
 			std::cout << "unable to load image";
 		}
-
-		image_data.emplace_back(ImageData({ width, height, data }));
+		
+		std::string file_name = std::filesystem::path(path).stem().u8string();
+		image_data.emplace_back(ImageData({file_name, width, height, data }));
 	}
 
 	return image_data;

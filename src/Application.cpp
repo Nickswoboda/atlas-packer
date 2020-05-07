@@ -295,35 +295,20 @@ void Application::SetKeyCallbacks()
 	});
 }
 
-ImageData CombineAtlas(const std::vector<ImageData>& images, int size)
+ImageData CombineAtlas(const std::vector<ImageData>& images, std::unordered_map<std::string, Vec2> placement, int width, int height)
 {
 
-	int tex_width = size;
-	int tex_height = tex_width;
 	int channels = 4;
-	int atlas_pitch = tex_width * channels;
+	int atlas_pitch = width * channels;
 
-	if (tex_width > 4096) {
-		return ImageData();
-	}
-
-	unsigned char* pixels = (unsigned char*)calloc((size_t)tex_height * atlas_pitch, 1);
-	int pen_x = 0, pen_y = 0;
-	int next_pen_y = images[0].height_;
+	unsigned char* pixels = (unsigned char*)calloc((size_t)height * atlas_pitch, 1);
 	
 	for (auto& image : images) {
 
 		int image_pitch = image.width_ * channels;
-		if (pen_x + image_pitch >= atlas_pitch) {
-			pen_x = 0;
-			pen_y += next_pen_y;
-			next_pen_y = image.height_;
 
-			if (pen_y + image.height_ >= tex_height) {
-				free(pixels);
-				return ImageData();
-			}
-		}
+		int pen_x = placement[image.path_name].x * channels;
+		int pen_y = placement[image.path_name].y;
 
 		for (int row = 0; row < image.height_; ++row) {
 			for (int col = 0; col < image_pitch; ++col) {
@@ -332,11 +317,9 @@ ImageData CombineAtlas(const std::vector<ImageData>& images, int size)
 				pixels[y * (atlas_pitch) + x] = image.data_[row * (image_pitch) + col];
 			}
 		}
-
-		pen_x += image_pitch;
 	}
 	
-	return ImageData{ tex_width, tex_height, pixels };
+	return ImageData{ "atlas.png", width, height, pixels };
 	
 }
 
@@ -390,12 +373,66 @@ unsigned int Application::CreateAtlas(const std::unordered_set<std::string>& pat
 {
 	std::vector<ImageData> image_data = GetImageData(paths);
 	std::sort(image_data.begin(), image_data.end(), [](ImageData a, ImageData b) {return a.height_ > b.height_; });
-	int size = 32;
-	while (atlas_.data_ == nullptr) {
-		atlas_ = CombineAtlas(image_data, size);
-		size *= 2;
+
+	int area = 0;
+	for (const auto& image : image_data) {
+		area += image.width_ * image.height_;
 	}
+
+	int atlas_width = 16;
+	int atlas_height = 16;
+	while (atlas_width * atlas_height < area) {
+		if (atlas_width == atlas_height) {
+			atlas_width *= 2;
+		}
+		else {
+			atlas_height = atlas_width;
+		}
+	}
+	std::unordered_map<std::string, Vec2> placement;
+	while (placement.empty()) {
+		std::cout << "Trying: " << atlas_width << ", " << atlas_height << "\n";
+
+		placement = GetTexturePlacements(image_data, atlas_width, atlas_height, padding);
+		
+		if (!placement.empty()) break;
+		if (atlas_width == atlas_height) {
+			atlas_width *= 2;
+		}
+		else {
+			atlas_height = atlas_width;
+		}
+		
+	}
+	atlas_ = CombineAtlas(image_data, placement, atlas_width, atlas_height);
 	return CreateTexture(atlas_);
+}
+
+std::unordered_map<std::string, Vec2> Application::GetTexturePlacements(const std::vector<ImageData>& images, int width, int height, int padding)
+{
+	std::unordered_map<std::string, Vec2> placement;
+
+	int pen_x = 0, pen_y = 0;
+	int next_pen_y = images[0].height_;
+
+	for (auto& image : images) {
+
+		if (pen_x + image.width_ >= width) {
+			pen_x = 0;
+			pen_y += next_pen_y;
+			next_pen_y = image.height_;
+
+			if (pen_y + image.height_ >= height) {
+				return std::unordered_map<std::string, Vec2>();
+			}
+		}
+
+		placement[image.path_name] = { pen_x, pen_y };
+
+		pen_x += image.width_;
+	}
+
+	return placement;
 }
 
 

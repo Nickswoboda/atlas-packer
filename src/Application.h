@@ -6,7 +6,15 @@
 #include "ImageData.h"
 
 #include <string>
+#include <unordered_map>
 #include <unordered_set>
+
+
+struct Vec2
+{
+	int x = 0;
+	int y = 0;
+};
 
 class Application
 {
@@ -41,6 +49,7 @@ public:
 
 	void UnpackFolders();
 	unsigned int CreateAtlas(const std::unordered_set<std::string>& paths, int padding, bool pow_of_2);
+	std::unordered_map<std::string, Vec2> GetTexturePlacements(const std::vector<ImageData>& images, int width, int height, int padding);
 
 private:
 	bool running_ = true;

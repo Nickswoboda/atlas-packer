@@ -5,6 +5,7 @@
 
 struct ImageData
 {
+	std::string path_name;
 	int width_ = 0;
 	int height_ = 0;
 	unsigned char* data_ = nullptr;
