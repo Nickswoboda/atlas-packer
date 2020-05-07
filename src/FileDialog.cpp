@@ -23,6 +23,36 @@ FileDialog::FileDialog(int width)
 	}
 }
 
+void FileDialog::UnpackFolders()
+{
+	std::vector<std::filesystem::path> unpacked_folders;
+	for (auto& items : input_items_) {
+		std::filesystem::path path = items;
+		if (std::filesystem::is_directory(path)) {
+			unpacked_folders.push_back(path);
+		}
+	}
+
+	for (const auto& folder : unpacked_folders) {
+		input_items_.erase(folder.u8string());
+	}
+
+	while (!unpacked_folders.empty()) {
+		auto current_folder = unpacked_folders[0];
+		unpacked_folders.erase(unpacked_folders.begin());
+
+		for (auto& file : std::filesystem::directory_iterator(current_folder, std::filesystem::directory_options::skip_permission_denied)) {
+			if (std::filesystem::is_directory(file)) {
+				unpacked_folders.push_back(file.path());
+			}
+			else if (file.path().extension() == ".png" || file.path().extension() == ".jpg") {
+				input_items_.insert(file.path().u8string());
+			}
+		}
+	}
+
+}
+
 void FileDialog::Render()
 {
 	ImGui::TextWrapped(current_file_path_.c_str());

@@ -8,6 +8,7 @@
 std::vector<ImageData> GetImageData(const std::unordered_set<std::string>& paths)
 {
 	std::vector<ImageData> image_data;
+
 	for (auto& path : paths) {
 		int width;
 		int height;

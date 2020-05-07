@@ -136,10 +136,7 @@ void Application::RenderInputState()
 	ImGui::Checkbox("##Powof2", &pow_of_2_);
 
 	if (ImGui::Button("Submit")) {
-		file_dialog_->input_items_.insert("C:/Users/Nick/bitmap.png");
-		file_dialog_->input_items_.insert("C:/Users/Nick/bluepassive.png");
-		file_dialog_->input_items_.insert("C:/Users/Nick/boots.png");
-		file_dialog_->input_items_.insert("C:/Users/Nick/greypassive.png");
+		file_dialog_->UnpackFolders();
 		atlas_texture_ = CreateAtlas(file_dialog_->input_items_, pixel_padding_, pow_of_2_);
 		PushState(State::Output);
 	}
@@ -149,7 +146,7 @@ void Application::RenderOutputState()
 {
 	ImGui::Text("Preview");
 
-	ImGui::Image((void*)(intptr_t)atlas_texture_, { atlas_width_, atlas_height_ });
+	ImGui::Image((void*)(intptr_t)atlas_texture_, { atlas_width_, atlas_height_ }, { 0,0 }, { 1,1 }, { 1,1,1,1 }, { 1,1,1,1 });
 
 	if (ImGui::Button("Save")) {
 
@@ -231,20 +228,27 @@ void Application::SetKeyCallbacks()
 
 ImageData CombineAtlas(const std::vector<ImageData>& images)
 {
-	int tex_width = 128;
-	int tex_height = 256;
+
+	int tex_width = images[0].height_ * (sqrt(images.size()) + 1);
+	int tex_height = tex_width;
 	int channels = 4;
 	int atlas_pitch = tex_width * channels;
+
+	if (tex_width > 4096) {
+		return ImageData();
+	}
 	
 	unsigned char* pixels = (unsigned char*)calloc((size_t)tex_height * atlas_pitch, 1);
 	int pen_x = 0, pen_y = 0;
+	int next_pen_y = images[0].height_;
 	
 	for (auto& image : images) {
 
 		int image_pitch = image.width_ * channels;
 		if (pen_x + image_pitch >= atlas_pitch) {
 			pen_x = 0;
-			pen_y += image.height_ * 2;
+			pen_y += next_pen_y;
+			next_pen_y = image.height_;
 		}
 
 		for (int row = 0; row < image.height_; ++row) {
@@ -281,7 +285,8 @@ unsigned int CreateTexture(ImageData& image)
 
 unsigned int Application::CreateAtlas(const std::unordered_set<std::string>& paths, int padding, bool pow_of_2)
 {
-	std::vector<ImageData> image_data = GetImageData(paths); 
+	std::vector<ImageData> image_data = GetImageData(paths);
+	std::sort(image_data.begin(), image_data.end(), [](ImageData a, ImageData b) {return a.height_ > b.height_; });
 	auto atlas = CombineAtlas(image_data);
 	atlas_width_ = atlas.width_;
 	atlas_height_ = atlas.height_;
