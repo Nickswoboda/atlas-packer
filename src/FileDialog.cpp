@@ -23,32 +23,11 @@ FileDialog::FileDialog(int width)
 	}
 }
 
-void FileDialog::UnpackFolders()
+void FileDialog::GoBack()
 {
-	std::vector<std::filesystem::path> unpacked_folders;
-	for (auto& items : input_items_) {
-		std::filesystem::path path = items;
-		if (std::filesystem::is_directory(path)) {
-			unpacked_folders.push_back(path);
-		}
-	}
-
-	for (const auto& folder : unpacked_folders) {
-		input_items_.erase(folder.u8string());
-	}
-
-	while (!unpacked_folders.empty()) {
-		auto current_folder = unpacked_folders[0];
-		unpacked_folders.erase(unpacked_folders.begin());
-
-		for (auto& file : std::filesystem::directory_iterator(current_folder, std::filesystem::directory_options::skip_permission_denied)) {
-			if (std::filesystem::is_directory(file)) {
-				unpacked_folders.push_back(file.path());
-			}
-			else if (file.path().extension() == ".png" || file.path().extension() == ".jpg") {
-				input_items_.insert(file.path().u8string());
-			}
-		}
+	if (!prev_paths_.empty()) {
+		current_file_path_ = prev_paths_.top();
+		prev_paths_.pop();
 	}
 }
 
@@ -109,45 +88,5 @@ void FileDialog::Render()
 		}
 		catch (std::filesystem::filesystem_error & error) {};
 	}
-
-	ImGui::SameLine();
-	ImGui::BeginChildFrame(2, { width_ / 2.0f, 200 });
-	int index = 0;
-	static int selected_index = -1;
-	for (auto& item : input_items_) {
-
-		if (ImGui::Selectable(item.c_str(), selected_index == index)) {
-			selected_index = index;
-			selected_input_item_ = item.c_str();
-		}
-		++index;
-	}
-	ImGui::EndChildFrame();
-
-	if (ImGui::Button("Prev")) {
-		if (!prev_paths_.empty()) {
-			current_file_path_ = prev_paths_.top();
-			prev_paths_.pop();
-		}
-	}
-	ImGui::SameLine();
-	if (ImGui::Button("Add")) {
-		if (!selected_path_.empty()) {
-			input_items_.insert(selected_path_.u8string());
-		}
-	}
-
-	ImGui::SameLine(width_ / 2.0f);
-	if (ImGui::Button("Remove")) {
-		input_items_.erase(selected_input_item_);
-		selected_index = -1;
-	}
-	ImGui::SameLine();
-	if (ImGui::Button("Clear All")) {
-		if (!selected_path_.empty()) {
-			input_items_.clear();
-		}
-	}
-
 }
 

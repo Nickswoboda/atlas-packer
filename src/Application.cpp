@@ -42,7 +42,8 @@ Application::Application(int width, int height)
 	glfwSetWindowUserPointer(window_.glfw_window_, this);
 	SetKeyCallbacks();
 
-	file_dialog_ = std::make_unique<FileDialog>(window_.width_);
+	input_file_dialog_ = std::make_unique<FileDialog>(window_.width_);
+	save_file_dialog_ = std::make_unique<FileDialog>(window_.width_);
 
 	state_stack_.push(State::Input);
 }
@@ -121,7 +122,44 @@ void Application::Render()
 
 void Application::RenderInputState()
 {
-	file_dialog_->Render();
+	input_file_dialog_->Render();
+
+	ImGui::SameLine();
+	ImGui::BeginChildFrame(2, { window_.width_ / 2.0f, 200 });
+	int index = 0;
+	static int selected_index = -1;
+	for (auto& item : input_items_) {
+
+		if (ImGui::Selectable(item.c_str(), selected_index == index)) {
+			selected_index = index;
+			selected_input_item_ = item.c_str();
+		}
+		++index;
+	}
+	ImGui::EndChildFrame();
+
+	if (ImGui::Button("Prev")) {
+		input_file_dialog_->GoBack();
+	}
+
+	ImGui::SameLine();
+	if (ImGui::Button("Add")) {
+		if (!input_file_dialog_->selected_path_.empty()) {
+			input_items_.insert(input_file_dialog_->selected_path_.u8string());
+		}
+	}
+
+	ImGui::SameLine(window_.width_ / 2.0f);
+	if (ImGui::Button("Remove")) {
+		input_items_.erase(selected_input_item_);
+		selected_index = -1;
+	}
+	ImGui::SameLine();
+	if (ImGui::Button("Clear All")) {
+		if (!input_file_dialog_->selected_path_.empty()) {
+			input_items_.clear();
+		}
+	}
 
 	ImGui::Text("Pixel Padding: ");
 	ImGui::SameLine();
@@ -139,8 +177,8 @@ void Application::RenderInputState()
 	ImGui::Checkbox("##Powof2", &pow_of_2_);
 
 	if (ImGui::Button("Submit")) {
-		file_dialog_->UnpackFolders();
-		atlas_texture_ID_ = CreateAtlas(file_dialog_->input_items_, pixel_padding_, pow_of_2_);
+		UnpackFolders();
+		atlas_texture_ID_ = CreateAtlas(input_items_, pixel_padding_, pow_of_2_);
 		PushState(State::Output);
 	}
 }
@@ -149,10 +187,35 @@ void Application::RenderOutputState()
 {
 	ImGui::Text("Preview");
 
-	ImGui::Image((void*)(intptr_t)atlas_texture_ID_, {(float) atlas_.width_, (float)atlas_.height_ }, { 0,0 }, { 1,1 }, { 1,1,1,1 }, { 1,1,1,1 });
+	ImGui::Image((void*)(intptr_t)atlas_texture_ID_, { (float)atlas_.width_, (float)atlas_.height_ }, { 0,0 }, { 1,1 }, { 1,1,1,1 }, { 1,1,1,1 });
 
+
+	ImGui::Separator();
+	ImGui::Text("Save Folder Path: %s", save_folder_path_.c_str());
+	ImGui::SameLine();
+	if (ImGui::Button("Change")){
+		changing_save_folder_ = true;
+	}
+
+	if (changing_save_folder_) {
+		save_file_dialog_->Render();
+
+		if (ImGui::Button("Prev")) {
+			save_file_dialog_->GoBack();
+		}
+
+		ImGui::SameLine();
+		if (ImGui::Button("Select")) {
+			if (!save_file_dialog_->selected_path_.empty() && std::filesystem::is_directory(save_file_dialog_->selected_path_)) {
+				save_folder_path_ = save_file_dialog_->selected_path_.generic_u8string();
+			}
+			changing_save_folder_ = false;
+		}
+	}
+
+	ImGui::Separator();
 	if (ImGui::Button("Save")) {
-		Save("C:/images/atlas.png");
+		Save(save_folder_path_);
 	}
 
 	if (ImGui::Button("Try Again")) {
@@ -172,8 +235,12 @@ void Application::RenderSettingsMenu()
 	if (ImGui::DragInt("##width", &window_.width_, 1.0f, 100, 1000)) {
 		window_.UpdateSize();
 
-		if (file_dialog_ != nullptr) {
-			file_dialog_->width_ = window_.width_;
+		if (input_file_dialog_ != nullptr) {
+			input_file_dialog_->width_ = window_.width_;
+		}
+
+		if (save_file_dialog_ != nullptr) {
+			save_file_dialog_->width_ = window_.width_;
 		}
 	}
 	ImGui::PopItemWidth();
@@ -209,9 +276,15 @@ void Application::Load()
 {
 }
 
-void Application::Save(const std::string& save_path)
+void Application::Save(const std::string& save_folder)
 {
-	stbi_write_png(save_path.c_str(), atlas_.width_, atlas_.height_, 4, (void*)atlas_.data_, atlas_.width_ * 4);
+
+	std::string full_path(save_folder + "/atlas.png");
+	int success = stbi_write_png(full_path.c_str(), atlas_.width_, atlas_.height_, 4, (void*)atlas_.data_, atlas_.width_ * 4);
+
+	if (!success) {
+		std::cout << "Unable to save image";
+	}
 }
 
 void Application::SetKeyCallbacks()
@@ -282,6 +355,35 @@ unsigned int CreateTexture(ImageData& image)
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image.width_, image.height_, 0, GL_RGBA, GL_UNSIGNED_BYTE, image.data_);
 
 	return image_texture;
+}
+
+void Application::UnpackFolders()
+{
+	std::vector<std::filesystem::path> unpacked_folders;
+	for (auto& items : input_items_) {
+		std::filesystem::path path = items;
+		if (std::filesystem::is_directory(path)) {
+			unpacked_folders.push_back(path);
+		}
+	}
+
+	for (const auto& folder : unpacked_folders) {
+		input_items_.erase(folder.u8string());
+	}
+
+	while (!unpacked_folders.empty()) {
+		auto current_folder = unpacked_folders[0];
+		unpacked_folders.erase(unpacked_folders.begin());
+
+		for (auto& file : std::filesystem::directory_iterator(current_folder, std::filesystem::directory_options::skip_permission_denied)) {
+			if (std::filesystem::is_directory(file)) {
+				unpacked_folders.push_back(file.path());
+			}
+			else if (file.path().extension() == ".png" || file.path().extension() == ".jpg") {
+				input_items_.insert(file.path().u8string());
+			}
+		}
+	}
 }
 
 unsigned int Application::CreateAtlas(const std::unordered_set<std::string>& paths, int padding, bool pow_of_2)

@@ -6,6 +6,7 @@
 #include "ImageData.h"
 
 #include <string>
+#include <unordered_set>
 
 class Application
 {
@@ -33,10 +34,12 @@ public:
 
 	void PushState(State state);
 	void PopState();
-	void Save(const std::string& save_path);
+	void Save(const std::string& save_folder);
 
 	void SetKeyCallbacks();
 
+
+	void UnpackFolders();
 	unsigned int CreateAtlas(const std::unordered_set<std::string>& paths, int padding, bool pow_of_2);
 
 private:
@@ -46,7 +49,14 @@ private:
 	bool font_size_changed_ = false;
 
 	Window window_;
-	std::unique_ptr<FileDialog> file_dialog_;
+	std::unique_ptr<FileDialog> input_file_dialog_;
+	std::unique_ptr<FileDialog> save_file_dialog_;
+
+	std::string save_folder_path_;
+	bool changing_save_folder_ = false;
+
+	std::unordered_set<std::string> input_items_;
+	std::string selected_input_item_;
 
 	std::stack<State> state_stack_;
 
