@@ -50,7 +50,6 @@ void FileDialog::UnpackFolders()
 			}
 		}
 	}
-
 }
 
 void FileDialog::Render()

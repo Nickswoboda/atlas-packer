@@ -3,6 +3,8 @@
 #include "Window.h"
 #include "FileDialog.h"
 
+#include "ImageData.h"
+
 #include <string>
 
 class Application
@@ -31,7 +33,7 @@ public:
 
 	void PushState(State state);
 	void PopState();
-	void Save();
+	void Save(const std::string& save_path);
 
 	void SetKeyCallbacks();
 
@@ -51,9 +53,9 @@ private:
 	int pixel_padding_ = 0;
 	bool pow_of_2_ = false;
 
-	unsigned int atlas_texture_ = -1;
-	float atlas_width_ = 0;
-	float atlas_height_ = 0;
+	
+	unsigned int atlas_texture_ID_ = -1;
+	ImageData atlas_;
 	
 	std::vector<unsigned int> temp_images_;
 };

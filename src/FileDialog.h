@@ -23,6 +23,5 @@ public:
 	std::filesystem::path selected_path_;
 
 	std::unordered_set<std::string> input_items_;
-
 	std::string selected_input_item_;
 };
