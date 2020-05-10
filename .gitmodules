@@ -1,3 +1,0 @@
-[submodule "dependencies/GLFW"]
-	path = dependencies/GLFW
-	url = https://github.com/glfw/glfw
