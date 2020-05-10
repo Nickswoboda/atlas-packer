@@ -12,7 +12,7 @@ Window::Window(int width, int height)
 
 	glfwWindowHint(GLFW_DECORATED, GLFW_FALSE);
 	glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER, GLFW_TRUE);
-	//glfwWindowHint(GLFW_FLOATING, GLFW_TRUE);
+
 	glfw_window_ = glfwCreateWindow(width_, height_, "Atlas Packer", NULL, NULL);
 	if (!glfw_window_) {
 		glfwTerminate();

@@ -1,7 +1,5 @@
 #include "Application.h"
 
-#include "ImageData.h"
-
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
@@ -10,8 +8,6 @@
 #include "imgui_impl_glfw.h"
 
 #include <iostream>
-#include <iomanip>
-#include <fstream>
 #include <filesystem>
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
@@ -19,13 +15,12 @@
 
 
 Application::Application(int width, int height)
-	:window_(width, height)
+	:window_(width, height), input_file_dialog_(window_.width_ / 2, 200), save_file_dialog_(window_.width_ / 2, 200)
 {
 	if (!gladLoadGLLoader(GLADloadproc(glfwGetProcAddress))) {
 		std::cout << "could not load GLAD";
 	}
 
-	Load();
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
 	ImGuiIO& io = ImGui::GetIO(); (void)io;
@@ -40,10 +35,6 @@ Application::Application(int width, int height)
 	SetImGuiStyle();
 	
 	glfwSetWindowUserPointer(window_.glfw_window_, this);
-	SetKeyCallbacks();
-
-	input_file_dialog_ = std::make_unique<FileDialog>(window_.width_);
-	save_file_dialog_ = std::make_unique<FileDialog>(window_.width_);
 
 	state_stack_.push(State::Input);
 }
@@ -57,11 +48,11 @@ void Application::Run()
 {
 	while (!glfwWindowShouldClose(window_.glfw_window_) && running_)
 	{
+		glfwPollEvents();
+
 		if (Window::IsFocused()) {
 			Render();
 		}
-
-		glfwPollEvents();
 
 		//Must change font outside of ImGui Rendering
 		if (font_size_changed_) {
@@ -75,10 +66,6 @@ void Application::Run()
 		}
 	}
 
-}
-
-void Application::Update()
-{
 }
 
 void Application::Render()
@@ -103,12 +90,15 @@ void Application::Render()
 			PushState(State::Settings);
 		}
 	}
+
+	//move base transparent window when moving ImGui window
 	ImVec2 pos = ImGui::GetWindowPos();
 	if (pos.x != 0.0f || pos.y != 0.0f) {
 		ImGui::SetWindowPos({ 0.0f, 0.0f });
 		window_.Move(pos.x, pos.y);
 	}
 
+	//resize height based on amount of widgets on screen
 	if (window_.height_ < ImGui::GetCursorPosY()) {
 		window_.ResizeHeight(ImGui::GetCursorPosY());
 	}
@@ -122,43 +112,42 @@ void Application::Render()
 
 void Application::RenderInputState()
 {
-	input_file_dialog_->Render();
+	input_file_dialog_.Render();
 
 	ImGui::SameLine();
 	ImGui::BeginChildFrame(2, { window_.width_ / 2.0f, 200 });
 	int index = 0;
 	static int selected_index = -1;
+	static std::string selected_input_item;
 	for (auto& item : input_items_) {
 
 		if (ImGui::Selectable(item.c_str(), selected_index == index)) {
 			selected_index = index;
-			selected_input_item_ = item.c_str();
+			selected_input_item = item.c_str();
 		}
 		++index;
 	}
 	ImGui::EndChildFrame();
 
 	if (ImGui::Button("Prev")) {
-		input_file_dialog_->GoBack();
+		input_file_dialog_.GoBack();
 	}
 
 	ImGui::SameLine();
 	if (ImGui::Button("Add")) {
-		if (!input_file_dialog_->selected_path_.empty()) {
-			input_items_.insert(input_file_dialog_->selected_path_.u8string());
+		if (!input_file_dialog_.selected_path_.empty()) {
+			input_items_.insert(input_file_dialog_.selected_path_);
 		}
 	}
 
 	ImGui::SameLine(window_.width_ / 2.0f);
 	if (ImGui::Button("Remove")) {
-		input_items_.erase(selected_input_item_);
+		input_items_.erase(selected_input_item);
 		selected_index = -1;
 	}
 	ImGui::SameLine();
 	if (ImGui::Button("Clear All")) {
-		if (!input_file_dialog_->selected_path_.empty()) {
-			input_items_.clear();
-		}
+		input_items_.clear();
 	}
 
 	ImGui::Text("Pixel Padding: ");
@@ -177,7 +166,7 @@ void Application::RenderInputState()
 	ImGui::Checkbox("##Powof2", &pow_of_2_);
 
 	if (ImGui::Button("Submit")) {
-		UnpackFolders();
+		UnpackInputFolders();
 		atlas_texture_ID_ = CreateAtlas(input_items_, pixel_padding_, pow_of_2_);
 		PushState(State::Output);
 	}
@@ -198,18 +187,18 @@ void Application::RenderOutputState()
 	}
 
 	if (changing_save_folder_) {
-		save_file_dialog_->Render();
+		save_file_dialog_.Render();
 
 		if (ImGui::Button("Prev")) {
-			save_file_dialog_->GoBack();
+			save_file_dialog_.GoBack();
 		}
 
 		ImGui::SameLine();
 		if (ImGui::Button("Select")) {
-			if (!save_file_dialog_->selected_path_.empty() && std::filesystem::is_directory(save_file_dialog_->selected_path_)) {
-				save_folder_path_ = save_file_dialog_->selected_path_.generic_u8string();
+			if (std::filesystem::is_directory(save_file_dialog_.selected_path_)) {
+				save_folder_path_ = save_file_dialog_.selected_path_;
+				changing_save_folder_ = false;
 			}
-			changing_save_folder_ = false;
 		}
 	}
 
@@ -221,7 +210,6 @@ void Application::RenderOutputState()
 	if (ImGui::Button("Try Again")) {
 		PopState();
 	}
-
 }
 
 void Application::RenderSettingsMenu()
@@ -232,17 +220,12 @@ void Application::RenderSettingsMenu()
 		font_size_changed_ = true;
 	}
 	ImGui::TextWrapped("Window Width");
-	if (ImGui::DragInt("##width", &window_.width_, 1.0f, 100, 1000)) {
+	if (ImGui::DragInt("##width", &window_.width_, 1.0f, 100, 1024)) {
 		window_.UpdateSize();
-
-		if (input_file_dialog_ != nullptr) {
-			input_file_dialog_->width_ = window_.width_;
-		}
-
-		if (save_file_dialog_ != nullptr) {
-			save_file_dialog_->width_ = window_.width_;
-		}
+		input_file_dialog_.width_ = window_.width_;
+		save_file_dialog_.width_ = window_.width_;
 	}
+
 	ImGui::PopItemWidth();
 
 	if (ImGui::Button("Return")) {
@@ -267,13 +250,8 @@ void Application::SetImGuiStyle()
 	style->WindowPadding = ImVec2(2, 2);
 
 	style->WindowRounding = 0.0f;
-	style->Colors[ImGuiCol_TitleBg] = ImVec4(0.0f, 0.0f, 0.0f, 0.2f);
-	style->Colors[ImGuiCol_TitleBgActive] = ImVec4(0.0f, 0.0f, 0.0f, 0.8f);
-	style->Colors[ImGuiCol_WindowBg] = ImVec4(0.0f, 0.0f, 0.0f, 0.8f);
-}
-
-void Application::Load()
-{
+	style->Colors[ImGuiCol_TitleBg] = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
+	style->Colors[ImGuiCol_TitleBgActive] = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
 }
 
 void Application::Save(const std::string& save_folder)
@@ -287,17 +265,8 @@ void Application::Save(const std::string& save_folder)
 	}
 }
 
-void Application::SetKeyCallbacks()
-{
-	glfwSetKeyCallback(window_.glfw_window_, [](GLFWwindow* window, int key, int scancode, int action, int mods) {
-
-		auto* app = (Application*)glfwGetWindowUserPointer(Window::glfw_window_);
-	});
-}
-
 ImageData CombineAtlas(const std::vector<ImageData>& images, std::unordered_map<std::string, Vec2> placement, int width, int height)
 {
-
 	int channels = 4;
 	int atlas_pitch = width * channels;
 
@@ -320,7 +289,6 @@ ImageData CombineAtlas(const std::vector<ImageData>& images, std::unordered_map<
 	}
 	
 	return ImageData{ "atlas.png", width, height, pixels };
-	
 }
 
 unsigned int CreateTexture(ImageData& image)
@@ -329,20 +297,19 @@ unsigned int CreateTexture(ImageData& image)
 	glGenTextures(1, &image_texture);
 	glBindTexture(GL_TEXTURE_2D, image_texture);
 
-	// Setup filtering parameters for display
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-	// Upload pixels into texture
 	glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image.width_, image.height_, 0, GL_RGBA, GL_UNSIGNED_BYTE, image.data_);
 
 	return image_texture;
 }
 
-void Application::UnpackFolders()
+void Application::UnpackInputFolders()
 {
 	std::vector<std::filesystem::path> unpacked_folders;
+
 	for (auto& items : input_items_) {
 		std::filesystem::path path = items;
 		if (std::filesystem::is_directory(path)) {
@@ -359,7 +326,7 @@ void Application::UnpackFolders()
 		unpacked_folders.erase(unpacked_folders.begin());
 
 		for (auto& file : std::filesystem::directory_iterator(current_folder, std::filesystem::directory_options::skip_permission_denied)) {
-			if (std::filesystem::is_directory(file)) {
+			if (file.is_directory()) {
 				unpacked_folders.push_back(file.path());
 			}
 			else if (file.path().extension() == ".png" || file.path().extension() == ".jpg") {
@@ -374,14 +341,14 @@ unsigned int Application::CreateAtlas(const std::unordered_set<std::string>& pat
 	std::vector<ImageData> image_data = GetImageData(paths);
 	std::sort(image_data.begin(), image_data.end(), [](ImageData a, ImageData b) {return a.height_ > b.height_; });
 
-	int area = 0;
+	int total_area = 0;
 	for (const auto& image : image_data) {
-		area += image.width_ * image.height_;
+		total_area += image.width_ * image.height_;
 	}
 
 	int atlas_width = 16;
 	int atlas_height = 16;
-	while (atlas_width * atlas_height < area) {
+	while (atlas_width * atlas_height < total_area) {
 		if (atlas_width == atlas_height) {
 			atlas_width *= 2;
 		}
@@ -402,7 +369,6 @@ unsigned int Application::CreateAtlas(const std::unordered_set<std::string>& pat
 		else {
 			atlas_height = atlas_width;
 		}
-		
 	}
 	atlas_ = CombineAtlas(image_data, placement, atlas_width, atlas_height);
 	return CreateTexture(atlas_);
@@ -417,7 +383,7 @@ std::unordered_map<std::string, Vec2> Application::GetTexturePlacements(const st
 
 	for (auto& image : images) {
 
-		if (pen_x + image.width_ >= width) {
+		while (pen_x + image.width_ >= width) {
 			pen_x = 0;
 			pen_y += next_pen_y;
 			next_pen_y = image.height_;
