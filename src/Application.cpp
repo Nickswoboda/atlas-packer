@@ -178,10 +178,8 @@ void Application::RenderOutputState()
 {
 	ImGui::Text("Preview");
 
-
 	int aspect_ratio = atlas_.width_ / atlas_.height_;
 	ImGui::Image((void*)(intptr_t)atlas_texture_ID_, { (float)256 * aspect_ratio, 256 }, { 0,0 }, { 1,1 }, { 1,1,1,1 }, { 1,1,1,1 });
-
 
 	ImGui::Separator();
 	ImGui::Text("Save Folder Path: %s", save_folder_path_.c_str());
@@ -344,7 +342,9 @@ void Application::UnpackInputFolders()
 		}
 	}
 
-	while (!unpacked_folders.empty()) {
+	static int max_processed_folders = 20;
+	int num_processed_folders = 0;
+	while (!unpacked_folders.empty() && num_processed_folders <= max_processed_folders) {
 		auto current_folder = unpacked_folders[0];
 		unpacked_folders.erase(unpacked_folders.begin());
 
@@ -356,6 +356,8 @@ void Application::UnpackInputFolders()
 				unpacked_items_.insert(file.path().u8string());
 			}
 		}
+
+		++num_processed_folders;
 	}
 }
 
