@@ -24,6 +24,10 @@ public:
 		Output,
 		Settings
 	};
+	enum class SaveFileFormat {
+		PNG,
+		JPG
+	};
 
 	Application(int width, int height);
 	~Application();
@@ -58,7 +62,10 @@ private:
 	std::string save_folder_path_;
 	bool changing_save_folder_ = false;
 
+	SaveFileFormat save_file_format_ = SaveFileFormat::PNG;
+
 	std::unordered_set<std::string> input_items_;
+	std::unordered_set<std::string> unpacked_items_;
 
 	std::stack<State> state_stack_;
 
