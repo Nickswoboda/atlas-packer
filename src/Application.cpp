@@ -2,6 +2,7 @@
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+#include <json.hpp>
 
 #include "imgui.h"
 #include "imgui_impl_opengl3.h"
@@ -165,6 +166,9 @@ void Application::RenderInputState()
 	ImGui::SameLine();
 	ImGui::Checkbox("##Powof2", &pow_of_2_);
 
+	if (input_items_.empty()) {
+		ImGuiErrorText("You must add an item to submit");
+	}
 	if (ImGui::Button("Submit") && !input_items_.empty()) {
 		UnpackInputFolders();
 		if (!unpacked_items_.empty()) {
@@ -172,14 +176,20 @@ void Application::RenderInputState()
 			PushState(State::Output);
 		}
 	}
+
 }
 
 void Application::RenderOutputState()
 {
 	ImGui::Text("Preview");
 
-	int aspect_ratio = atlas_.width_ / atlas_.height_;
-	ImGui::Image((void*)(intptr_t)atlas_texture_ID_, { (float)256 * aspect_ratio, 256 }, { 0,0 }, { 1,1 }, { 1,1,1,1 }, { 1,1,1,1 });
+	if (atlas_texture_ID_ == -1) {
+		ImGuiErrorText("Unable to create atlas");
+	}
+	else {
+		int aspect_ratio = atlas_.width_ / atlas_.height_;
+		ImGui::Image((void*)(intptr_t)atlas_texture_ID_, { (float)256 * aspect_ratio, 256 }, { 0,0 }, { 1,1 }, { 1,1,1,1 }, { 1,1,1,1 });
+	}
 
 	ImGui::Separator();
 	ImGui::Text("Save Folder Path: %s", save_folder_path_.c_str());
@@ -216,8 +226,16 @@ void Application::RenderOutputState()
 		ImGui::EndCombo();
 	}
 
+	if (save_file_format_ == SaveFileFormat::JPG) {
+		ImGui::Text("JPG quality level: "); ImGui::SameLine();
+		ImGui::SliderInt("##jpgquality", &jpg_quality_, 1, 100);
+	}
+
 	ImGui::Separator();
-	if (ImGui::Button("Save")) {
+	if (save_folder_path_.empty()) {
+		ImGuiErrorText("You must choose a save destination folder");
+	}
+	if (ImGui::Button("Save") && !save_folder_path_.empty()) {
 		Save(save_folder_path_);
 	}
 
@@ -240,12 +258,18 @@ void Application::RenderSettingsMenu()
 		input_file_dialog_.width_ = window_.width_ / 2;
 		save_file_dialog_.width_ = window_.width_ / 2;
 	}
-
 	ImGui::PopItemWidth();
 
 	if (ImGui::Button("Return")) {
 		PopState();
 	}
+}
+
+void Application::ImGuiErrorText(const std::string& error)
+{
+	ImGui::PushStyleColor(ImGuiCol_Text, { 1.0, 0.0, 0.0, 1.0 });
+	ImGui::Text(error.c_str());
+	ImGui::PopStyleColor();
 }
 
 void Application::PushState(State state)
@@ -271,9 +295,6 @@ void Application::SetImGuiStyle()
 
 void Application::Save(const std::string& save_folder)
 {
-	if (save_folder_path_.empty()) {
-		return;
-	}
 	int success;
 
 	if (save_file_format_ == SaveFileFormat::PNG) {
@@ -282,12 +303,13 @@ void Application::Save(const std::string& save_folder)
 	}
 	else {
 		std::string full_path(save_folder + "/atlas.jpg");
-		success = stbi_write_jpg(full_path.c_str(), atlas_.width_, atlas_.height_, 4, (void*)atlas_.data_, 90);
+		success = stbi_write_jpg(full_path.c_str(), atlas_.width_, atlas_.height_, 4, (void*)atlas_.data_, jpg_quality_);
 	}
-
 	if (!success) {
 		std::cout << "Unable to save image";
 	}
+
+	
 }
 
 ImageData CombineAtlas(const std::vector<ImageData>& images, std::unordered_map<std::string, Vec2> placement, int width, int height)
@@ -374,31 +396,20 @@ unsigned int Application::CreateAtlas(const std::unordered_set<std::string>& pat
 	int atlas_width = 16;
 	int atlas_height = 16;
 	while (atlas_width * atlas_height < total_area) {
-		if (atlas_width == atlas_height) {
-			atlas_width *= 2;
-		}
-		else {
-			atlas_height = atlas_width;
-		}
+		atlas_width == atlas_height ? atlas_width *= 2 : atlas_height = atlas_width;
 	}
 
 	std::unordered_map<std::string, Vec2> placement;
 	while (placement.empty()) {
 		if (atlas_width > 4096) {
 			return -1;
-			//error about not being able to fit images within max size atlas
 		}
 		std::cout << "Trying: " << atlas_width << ", " << atlas_height << "\n";
 
 		placement = GetTexturePlacements(image_data, atlas_width, atlas_height, padding);
 		
 		if (!placement.empty()) break;
-		if (atlas_width == atlas_height) {
-			atlas_width *= 2;
-		}
-		else {
-			atlas_height = atlas_width;
-		}
+		atlas_width == atlas_height ? atlas_width *= 2 : atlas_height = atlas_width;
 	}
 	atlas_ = CombineAtlas(image_data, placement, atlas_width, atlas_height);
 	return CreateTexture(atlas_);

@@ -40,6 +40,7 @@ public:
 	void RenderInputState();
 	void RenderOutputState();
 	void RenderSettingsMenu();
+	void ImGuiErrorText(const std::string& error);
 
 	void PushState(State state);
 	void PopState();
@@ -58,6 +59,7 @@ private:
 	Window window_;
 	FileDialog input_file_dialog_;
 	FileDialog save_file_dialog_;
+	int jpg_quality_ = 90;
 
 	std::string save_folder_path_;
 	bool changing_save_folder_ = false;
