@@ -2,7 +2,6 @@
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
-#include <json.hpp>
 
 #include "imgui.h"
 #include "imgui_impl_opengl3.h"
@@ -10,6 +9,7 @@
 
 #include <iostream>
 #include <filesystem>
+#include <fstream>
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <stb_image_write.h>
@@ -309,7 +309,8 @@ void Application::Save(const std::string& save_folder)
 		std::cout << "Unable to save image";
 	}
 
-	
+	std::ofstream file(save_folder + "/atlas-data.json");
+	file << std::setw(4) << output_json_ << std::endl;
 }
 
 ImageData CombineAtlas(const std::vector<ImageData>& images, std::unordered_map<std::string, Vec2> placement, int width, int height)
@@ -319,6 +320,7 @@ ImageData CombineAtlas(const std::vector<ImageData>& images, std::unordered_map<
 
 	unsigned char* pixels = new unsigned char[(size_t)height * atlas_pitch]();
 	
+	nlohmann::json json;
 	for (auto& image : images) {
 
 		int image_pitch = image.width_ * channels;
@@ -334,8 +336,8 @@ ImageData CombineAtlas(const std::vector<ImageData>& images, std::unordered_map<
 			}
 		}
 	}
-	
-	return ImageData{ "atlas.png", width, height, pixels };
+
+	return ImageData{ "atlas", width, height, pixels };
 }
 
 unsigned int CreateTexture(ImageData& image)
@@ -412,7 +414,22 @@ unsigned int Application::CreateAtlas(const std::unordered_set<std::string>& pat
 		atlas_width == atlas_height ? atlas_width *= 2 : atlas_height = atlas_width;
 	}
 	atlas_ = CombineAtlas(image_data, placement, atlas_width, atlas_height);
+	output_json_ = CreateJsonFile(image_data, placement);
 	return CreateTexture(atlas_);
+}
+
+nlohmann::json Application::CreateJsonFile(const std::vector<ImageData>& images, std::unordered_map<std::string, Vec2> placement)
+{
+	nlohmann::json json;
+
+	for (const auto& image : images) {
+		json[image.path_name]["x_pos"] = placement[image.path_name].x;
+		json[image.path_name]["y_pos"] = placement[image.path_name].y;
+		json[image.path_name]["width"] = image.width_;
+		json[image.path_name]["height"] = image.height_;
+	}
+
+	return json;
 }
 
 std::unordered_map<std::string, Vec2> Application::GetTexturePlacements(const std::vector<ImageData>& images, int width, int height, int padding)

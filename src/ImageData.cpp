@@ -19,7 +19,7 @@ std::vector<ImageData> GetImageData(const std::unordered_set<std::string>& paths
 			std::cout << "unable to load image";
 		}
 		
-		std::string file_name = std::filesystem::path(path).stem().u8string();
+		std::string file_name = std::filesystem::path(path).generic_u8string();
 		image_data.emplace_back(ImageData({file_name, width, height, data }));
 	}
 

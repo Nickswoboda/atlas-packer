@@ -4,6 +4,8 @@
 #include "FileDialog.h"
 #include "ImageData.h"
 
+#include <json.hpp>
+
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -48,6 +50,7 @@ public:
 
 	void UnpackInputFolders();
 	unsigned int CreateAtlas(const std::unordered_set<std::string>& paths, int padding, bool pow_of_2);
+	nlohmann::json CreateJsonFile(const std::vector<ImageData>& images, std::unordered_map<std::string, Vec2> placement);
 	std::unordered_map<std::string, Vec2> GetTexturePlacements(const std::vector<ImageData>& images, int width, int height, int padding);
 
 private:
@@ -76,4 +79,6 @@ private:
 
 	unsigned int atlas_texture_ID_ = -1;
 	ImageData atlas_;
+
+	nlohmann::json output_json_;
 };
