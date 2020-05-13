@@ -2,20 +2,13 @@
 
 #include "Window.h"
 #include "FileDialog.h"
-#include "ImageData.h"
+#include "AtlasPacker.h"
 
 #include <json.hpp>
 
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
-
-
-struct Vec2
-{
-	int x = 0;
-	int y = 0;
-};
 
 class Application
 {
@@ -49,15 +42,15 @@ public:
 	void Save(const std::string& save_folder);
 
 	void UnpackInputFolders();
-	unsigned int CreateAtlas(const std::unordered_set<std::string>& paths, int padding, bool pow_of_2);
-	nlohmann::json CreateJsonFile(const std::vector<ImageData>& images, std::unordered_map<std::string, Vec2> placement);
-	std::unordered_map<std::string, Vec2> GetTexturePlacements(const std::vector<ImageData>& images, int width, int height, int padding);
+	unsigned int Application::CreateTexture(ImageData& image);
 
 private:
 	bool running_ = true;
 
 	int font_size_= 16;
 	bool font_size_changed_ = false;
+
+	AtlasPacker atlas_packer_;
 
 	Window window_;
 	FileDialog input_file_dialog_;
@@ -74,11 +67,6 @@ private:
 
 	std::stack<State> state_stack_;
 
-	int pixel_padding_ = 0;
-	bool pow_of_2_ = false;
-
 	unsigned int atlas_texture_ID_ = -1;
-	ImageData atlas_;
-
-	nlohmann::json output_json_;
+	ImageData atlas_image_data_;
 };
