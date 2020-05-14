@@ -42,7 +42,7 @@ public:
 	void Save(const std::string& save_folder);
 
 	void UnpackInputFolders();
-	unsigned int Application::CreateTexture(ImageData& image);
+	unsigned int Application::CreateTexture(int image_index);
 
 private:
 	bool running_ = true;
@@ -51,6 +51,7 @@ private:
 	bool font_size_changed_ = false;
 
 	AtlasPacker atlas_packer_;
+	ImageData image_data_;
 
 	Window window_;
 	FileDialog input_file_dialog_;
@@ -63,7 +64,7 @@ private:
 	SaveFileFormat save_file_format_ = SaveFileFormat::PNG;
 
 	std::unordered_set<std::string> input_items_;
-	std::unordered_set<std::string> unpacked_items_;
+	std::vector<std::string> unpacked_items_;
 
 	std::stack<State> state_stack_;
 

@@ -5,12 +5,6 @@
 #include <unordered_map>
 #include <json.hpp>
 
-struct Vec2
-{
-	int x = 0;
-	int y = 0;
-};
-
 struct Stats
 {
 	double time_elapsed_in_ms = 0.0;
@@ -24,10 +18,10 @@ struct Stats
 class AtlasPacker
 {
 public:
-	ImageData CreateAtlas(std::vector<ImageData>& image_data);
-	nlohmann::json CreateJsonFile(const std::vector<ImageData>& images, std::unordered_map<std::string, Vec2> placement);
-	std::unordered_map<std::string, Vec2> PackAtlasRects(std::vector<ImageData>& images, Vec2 size);
-	Vec2 EstimateAtlasSize(const std::vector<ImageData>& image_data);
+	void CreateAtlas(ImageData& image_data);
+	nlohmann::json CreateJsonFile(const ImageData& images, std::unordered_map<std::string, Vec2> placement);
+	bool PackAtlasRects(ImageData& images, Vec2 size);
+	Vec2 EstimateAtlasSize(const ImageData& images);
 
 	int max_width_ = 4096;
 	int max_height_ = 4096;

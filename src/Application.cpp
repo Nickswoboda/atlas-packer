@@ -194,9 +194,9 @@ void Application::RenderInputState()
 	if (ImGui::Button("Submit") && !input_items_.empty()) {
 		UnpackInputFolders();
 		if (!unpacked_items_.empty()) {
-			std::vector<ImageData> image_data = GetImageData(unpacked_items_);
-			atlas_image_data_ = atlas_packer_.CreateAtlas(image_data);
-			atlas_texture_ID_ = CreateTexture(atlas_image_data_);
+			GetImageData(unpacked_items_, image_data_);
+			atlas_packer_.CreateAtlas(image_data_);
+			atlas_texture_ID_ = CreateTexture(image_data_.atlas_index_);
 			PushState(State::Output);
 		}
 	}
@@ -210,8 +210,8 @@ void Application::RenderOutputState()
 		ImGuiErrorText("Unable to create atlas");
 	}
 	else {
-		int aspect_ratio = atlas_image_data_.width_ / atlas_image_data_.height_;
-		ImGui::Image((void*)(intptr_t)atlas_texture_ID_, { (float)256 * aspect_ratio, 256 }, { 0,0 }, { 1,1 }, { 1,1,1,1 }, { 1,1,1,1 });
+		//int aspect_ratio = image_data_.size_[image_data_.atlas_index_].x / atlas_image_data_.size_[image_data_.atlas_index_].y;
+		ImGui::Image((void*)(intptr_t)atlas_texture_ID_, { 256.0f, 256.0f }, { 0,0 }, { 1,1 }, { 1,1,1,1 }, { 1,1,1,1 });
 
 		ImGui::Text("Stats:");
 		ImGui::Text("Unused area: %i px", atlas_packer_.stats_.unused_area);
@@ -327,11 +327,11 @@ void Application::Save(const std::string& save_folder)
 
 	if (save_file_format_ == SaveFileFormat::PNG) {
 		std::string full_path(save_folder + "/atlas.png");
-		success = stbi_write_png(full_path.c_str(), atlas_image_data_.width_, atlas_image_data_.height_, 4, (void*)atlas_image_data_.data_, atlas_image_data_.width_ * 4);
+		success = stbi_write_png(full_path.c_str(), image_data_.size_[image_data_.atlas_index_].x, image_data_.size_[image_data_.atlas_index_].y, 4, (void*)image_data_.data_[image_data_.atlas_index_], image_data_.size_[image_data_.atlas_index_].x * 4);
 	}
 	else {
 		std::string full_path(save_folder + "/atlas.jpg");
-		success = stbi_write_jpg(full_path.c_str(), atlas_image_data_.width_, atlas_image_data_.height_, 4, (void*)atlas_image_data_.data_, jpg_quality_);
+		success = stbi_write_jpg(full_path.c_str(), image_data_.size_[image_data_.atlas_index_].x, image_data_.size_[image_data_.atlas_index_].y, 4, (void*)image_data_.data_[image_data_.atlas_index_], jpg_quality_);
 	}
 	if (!success) {
 		std::cout << "Unable to save image";
@@ -341,9 +341,9 @@ void Application::Save(const std::string& save_folder)
 	file << std::setw(4) << atlas_packer_.data_json_ << std::endl;
 }
 
-unsigned int Application::CreateTexture(ImageData& image)
+unsigned int Application::CreateTexture(int image_index)
 {
-	if (image.data_ == nullptr) {
+	if (image_data_.data_[image_index] == nullptr) {
 		return -1;
 	}
 	unsigned int image_texture;
@@ -354,7 +354,7 @@ unsigned int Application::CreateTexture(ImageData& image)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
 	glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image.width_, image.height_, 0, GL_RGBA, GL_UNSIGNED_BYTE, image.data_);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image_data_.size_[image_index].x, image_data_.size_[image_index].y, 0, GL_RGBA, GL_UNSIGNED_BYTE, image_data_.data_[image_index]);
 
 	return image_texture;
 }
@@ -381,7 +381,7 @@ void Application::UnpackInputFolders()
 				unpacked_folders.push_back(file.path());
 			}
 			else if (file.path().extension() == ".png" || file.path().extension() == ".jpg") {
-				unpacked_items_.insert(file.path().u8string());
+				unpacked_items_.push_back(file.path().u8string());
 			}
 		}
 

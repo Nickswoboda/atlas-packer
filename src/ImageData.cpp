@@ -6,22 +6,27 @@
 #include <filesystem>
 #include <iostream>
 
-std::vector<ImageData> GetImageData(const std::unordered_set<std::string>& paths)
+void GetImageData(const std::vector<std::string>& paths, ImageData& image_data)
 {
-	std::vector<ImageData> image_data;
 
-	for (auto& path : paths) {
+	image_data.num_images_ = 0;
+
+	for (int i = 0; i < paths.size(); ++i) {
 		int width;
 		int height;
-		unsigned char* data = stbi_load(path.c_str(), &width, &height, nullptr, 4);
+		unsigned char* data = stbi_load(paths[i].c_str(), &width, &height, nullptr, 4);
 
 		if (data == nullptr) {
 			std::cout << "unable to load image";
 		}
-		
-		std::string file_name = std::filesystem::path(path).generic_u8string();
-		image_data.emplace_back(ImageData({file_name, width, height, data }));
-	}
 
-	return image_data;
+		std::string file_name = std::filesystem::path(paths[i]).generic_u8string();
+		
+		image_data.path_name_[i] = file_name;
+		image_data.size_[i].x = width;
+		image_data.size_[i].y = height;
+		image_data.data_[i] = data;
+
+		++image_data.num_images_;
+	}
 }

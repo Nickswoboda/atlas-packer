@@ -3,12 +3,22 @@
 #include <vector>
 #include <unordered_set>
 
-struct ImageData
+struct Vec2
 {
-	std::string path_name;
-	int width_ = 0;
-	int height_ = 0;
-	unsigned char* data_ = nullptr;
+	int x = 0;
+	int y = 0;
 };
 
-std::vector<ImageData> GetImageData(const std::unordered_set<std::string>& paths);
+constexpr int MAX_IMAGES = 512;
+struct ImageData
+{
+	Vec2 size_[MAX_IMAGES];
+	Vec2 pos_[MAX_IMAGES];
+	unsigned char* data_[MAX_IMAGES];
+	std::string path_name_[MAX_IMAGES];
+
+	int num_images_ = 0;
+	int atlas_index_ = 0;
+};
+
+void GetImageData(const std::vector<std::string>& paths, ImageData& image_data);
