@@ -31,3 +31,4 @@ add_subdirectory("dependencies/GLFW")
 target_link_libraries(Atlas glfw)
 
 file(COPY assets DESTINATION ${CMAKE_BINARY_DIR})
+set(CMAKE_CXX_FLAGS_RELEASE "-O3")

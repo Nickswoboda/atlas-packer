@@ -200,7 +200,6 @@ void Application::RenderInputState()
 			PushState(State::Output);
 		}
 	}
-
 }
 
 void Application::RenderOutputState()
@@ -213,6 +212,11 @@ void Application::RenderOutputState()
 	else {
 		int aspect_ratio = atlas_image_data_.width_ / atlas_image_data_.height_;
 		ImGui::Image((void*)(intptr_t)atlas_texture_ID_, { (float)256 * aspect_ratio, 256 }, { 0,0 }, { 1,1 }, { 1,1,1,1 }, { 1,1,1,1 });
+
+		ImGui::Text("Stats:");
+		ImGui::Text("Unused area: %i px", atlas_packer_.stats_.unused_area);
+		ImGui::Text("Packing efficiency: %.2f%%", atlas_packer_.stats_.packing_efficiency);
+		ImGui::Text("Time to pack: %.2f ms", atlas_packer_.stats_.time_elapsed_in_ms);
 	}
 
 	ImGui::Separator();
@@ -339,6 +343,9 @@ void Application::Save(const std::string& save_folder)
 
 unsigned int Application::CreateTexture(ImageData& image)
 {
+	if (image.data_ == nullptr) {
+		return -1;
+	}
 	unsigned int image_texture;
 	glGenTextures(1, &image_texture);
 	glBindTexture(GL_TEXTURE_2D, image_texture);

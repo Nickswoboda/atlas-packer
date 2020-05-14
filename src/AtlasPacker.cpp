@@ -2,15 +2,15 @@
 
 #include <algorithm>
 #include <iostream>
+#include <chrono>
 
-ImageData CombineAtlas(const std::vector<ImageData>& images, std::unordered_map<std::string, Vec2> placement, int width, int height)
+ImageData CreateAtlasImageData(const std::vector<ImageData>& images, std::unordered_map<std::string, Vec2> placement, int width, int height)
 {
 	int channels = 4;
 	int atlas_pitch = width * channels;
 
 	unsigned char* pixels = new unsigned char[(size_t)height * atlas_pitch]();
 
-	nlohmann::json json;
 	for (auto& image : images) {
 
 		int image_pitch = image.width_ * channels;
@@ -32,34 +32,35 @@ ImageData CombineAtlas(const std::vector<ImageData>& images, std::unordered_map<
 
 ImageData AtlasPacker::CreateAtlas(std::vector<ImageData>& image_data)
 {
-	std::sort(image_data.begin(), image_data.end(), [](ImageData a, ImageData b) {return a.height_ > b.height_; });
+	std::chrono::steady_clock::time_point start_time = std::chrono::high_resolution_clock::now();
 
-	int total_area = 0;
-	for (const auto& image : image_data) {
-		total_area += image.width_ * image.height_;
-	}
+	Vec2 size = EstimateAtlasSize(image_data);
 
-	int atlas_width = 16;
-	int atlas_height = 16;
-	while (atlas_width * atlas_height < total_area) {
-		atlas_width == atlas_height ? atlas_width *= 2 : atlas_height = atlas_width;
-	}
-
+	//try algo, if can't fit everything, increase size and try again
 	std::unordered_map<std::string, Vec2> placement;
 	while (placement.empty()) {
-		if (atlas_width > max_width_ || atlas_height > max_height_) {
+		if (size.x > max_width_ || size.y > max_height_) {
 			return ImageData();
 		}
-		std::cout << "Trying: " << atlas_width << ", " << atlas_height << "\n";
+		std::cout << "Trying: " << size.x << ", " << size.y << "\n";
 
-		placement = GetTexturePlacements(image_data, atlas_width, atlas_height);
+		placement = PackAtlasRects(image_data, size);
 
 		if (!placement.empty()) break;
-		atlas_width == atlas_height ? atlas_width *= 2 : atlas_height = atlas_width;
+		size.x == size.y ? size.x *= 2 : size.y = size.x;
 	}
 
+	stats_.atlas_area = size.x * size.y;
+	stats_.unused_area = stats_.atlas_area - stats_.total_images_area;
+	stats_.packing_efficiency = (stats_.total_images_area / (float)stats_.atlas_area) * 100;
+
 	data_json_ = CreateJsonFile(image_data, placement);
-	return CombineAtlas(image_data, placement, atlas_width, atlas_height);
+	ImageData atlas_data = CreateAtlasImageData(image_data, placement, size.x, size.y);
+
+	std::chrono::steady_clock::time_point end_time = std::chrono::high_resolution_clock::now();
+	stats_.time_elapsed_in_ms = std::chrono::duration<double, std::milli>(end_time - start_time).count();
+
+	return atlas_data;
 }
 
 nlohmann::json AtlasPacker::CreateJsonFile(const std::vector<ImageData>& images, std::unordered_map<std::string, Vec2> placement)
@@ -76,8 +77,10 @@ nlohmann::json AtlasPacker::CreateJsonFile(const std::vector<ImageData>& images,
 	return json;
 }
 
-std::unordered_map<std::string, Vec2> AtlasPacker::GetTexturePlacements(const std::vector<ImageData>& images, int width, int height)
+std::unordered_map<std::string, Vec2> AtlasPacker::PackAtlasRects(std::vector<ImageData>& images, Vec2 size)
 {
+	std::sort(images.begin(), images.end(), [](ImageData a, ImageData b) {return a.height_ > b.height_; });
+
 	std::unordered_map<std::string, Vec2> placement;
 
 	int pen_x = 0, pen_y = 0;
@@ -85,12 +88,13 @@ std::unordered_map<std::string, Vec2> AtlasPacker::GetTexturePlacements(const st
 
 	for (auto& image : images) {
 
-		while (pen_x + image.width_ >= width) {
+		while (pen_x + image.width_ >= size.x) {
 			pen_x = 0;
 			pen_y += next_pen_y + pixel_padding_;
 			next_pen_y = image.height_;
 
-			if (pen_y + image.height_ >= height) {
+			//unable to fit everything in atlas
+			if (pen_y + image.height_ >= size.y) {
 				return std::unordered_map<std::string, Vec2>();
 			}
 		}
@@ -101,4 +105,17 @@ std::unordered_map<std::string, Vec2> AtlasPacker::GetTexturePlacements(const st
 	}
 
 	return placement;
+}
+
+Vec2 AtlasPacker::EstimateAtlasSize(const std::vector<ImageData>& image_data)
+{
+	stats_.total_images_area = 0;
+	for (const auto& image : image_data) {
+		stats_.total_images_area += image.width_ * image.height_;
+	}
+	Vec2 size{ 16, 16 };
+	while (size.x * size.y < stats_.total_images_area) {
+		size.x == size.y ? size.x *= 2 : size.y = size.x;
+	}
+	return size;
 }
