@@ -76,27 +76,30 @@ nlohmann::json AtlasPacker::CreateJsonFile(const ImageData& images)
 
 bool AtlasPacker::PackAtlasRects(ImageData& images, Vec2 size)
 {
-	//std::sort(images.begin(), images.end(), [](ImageData a, ImageData b) {return a.height_ > b.height_; });
+	//sort indices without actually 
+	std::vector<int> sort_indices(images.num_images_);
+	std::iota(sort_indices.begin(), sort_indices.end(), 0);
+	std::sort(sort_indices.begin(), sort_indices.end(), [&images](int i, int j) { return images.sizes_[i].y > images.sizes_[j].y; });
 
 	int pen_x = 0, pen_y = 0;
-	int next_pen_y = images.sizes_[0].y;
+	int next_pen_y = images.sizes_[sort_indices[0]].y;
 
 	for (int i = 0; i < images.num_images_; ++i) {
 
-		while (pen_x + images.sizes_[i].x >= size.x) {
+		while (pen_x + images.sizes_[sort_indices[i]].x >= size.x) {
 			pen_x = 0;
 			pen_y += next_pen_y + pixel_padding_;
-			next_pen_y = images.sizes_[i].y;
+			next_pen_y = images.sizes_[sort_indices[i]].y;
 
 			//unable to fit everything in atlas
-			if (pen_y + images.sizes_[i].y >= size.y) {
+			if (pen_y + images.sizes_[sort_indices[i]].y >= size.y) {
 				return false;
 			}
 		}
 
-		images.pos_[i] = { pen_x, pen_y };
+		images.pos_[sort_indices[i]] = { pen_x, pen_y };
 
-		pen_x += images.sizes_[i].x + pixel_padding_;
+		pen_x += images.sizes_[sort_indices[i]].x + pixel_padding_;
 	}
 
 	return true;

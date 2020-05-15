@@ -210,7 +210,7 @@ void Application::RenderOutputState()
 	}
 	else {
 		int aspect_ratio = image_data_.sizes_[atlas_index_].x / image_data_.sizes_[atlas_index_].y;
-		ImGui::Image((void*)(intptr_t)atlas_texture_ID_, { 256.0f, 256.0f }, { 0,0 }, { 1,1 }, { 1,1,1,1 }, { 1,1,1,1 });
+		ImGui::Image((void*)(intptr_t)atlas_texture_ID_, { 256.0f * aspect_ratio, 256.0f }, { 0,0 }, { 1,1 }, { 1,1,1,1 }, { 1,1,1,1 });
 
 		ImGui::Text("Stats:");
 		ImGui::Text("Unused area: %i px", atlas_packer_.stats_.unused_area);

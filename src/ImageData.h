@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <array>
 #include <unordered_set>
 
 struct Vec2
@@ -12,10 +13,10 @@ struct Vec2
 constexpr int MAX_IMAGES = 512;
 struct ImageData
 {
-	Vec2 sizes_[MAX_IMAGES];
-	Vec2 pos_[MAX_IMAGES];
-	unsigned char* data_[MAX_IMAGES];
-	std::string paths_[MAX_IMAGES];
+	std::array<Vec2, MAX_IMAGES> sizes_;
+	std::array<Vec2, MAX_IMAGES> pos_;
+	std::array<unsigned char*, MAX_IMAGES> data_;
+	std::array<std::string, MAX_IMAGES> paths_;
 
 	int num_images_ = 0;
 };
