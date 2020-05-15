@@ -18,8 +18,8 @@ struct Stats
 class AtlasPacker
 {
 public:
-	void CreateAtlas(ImageData& image_data);
-	nlohmann::json CreateJsonFile(const ImageData& images, std::unordered_map<std::string, Vec2> placement);
+	int CreateAtlas(ImageData& image_data);
+	nlohmann::json CreateJsonFile(const ImageData& images);
 	bool PackAtlasRects(ImageData& images, Vec2 size);
 	Vec2 EstimateAtlasSize(const ImageData& images);
 

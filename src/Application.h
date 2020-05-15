@@ -52,6 +52,7 @@ private:
 
 	AtlasPacker atlas_packer_;
 	ImageData image_data_;
+	int atlas_index_;
 
 	Window window_;
 	FileDialog input_file_dialog_;
@@ -69,5 +70,4 @@ private:
 	std::stack<State> state_stack_;
 
 	unsigned int atlas_texture_ID_ = -1;
-	ImageData atlas_image_data_;
 };
