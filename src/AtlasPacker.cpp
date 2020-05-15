@@ -76,7 +76,7 @@ nlohmann::json AtlasPacker::CreateJsonFile(const ImageData& images)
 
 bool AtlasPacker::PackAtlasRects(ImageData& images, Vec2 size)
 {
-	//sort indices without actually 
+	//sort indices of sizes as if they were sorted by height, but without actually sorting the underlying structure
 	std::vector<int> sort_indices(images.num_images_);
 	std::iota(sort_indices.begin(), sort_indices.end(), 0);
 	std::sort(sort_indices.begin(), sort_indices.end(), [&images](int i, int j) { return images.sizes_[i].y > images.sizes_[j].y; });
