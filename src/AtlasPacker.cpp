@@ -40,7 +40,9 @@ int AtlasPacker::CreateAtlas(ImageData& image_data)
 
 	//try algo, if can't fit everything, increase size and try again
 	while (!PackAtlasRects(image_data, size)) {
-		size.x == size.y ? size.x *= 2 : size.y = size.x;
+
+		//every iteration increase either by 64px or double size if pow_of_two is enabled
+		size.x == size.y ? (size.x += pow_of_2_ ? size.x : 64) : size.y = size.x;
 
 		if (size.x > max_width_ || size.y > max_height_) {
 			return -1;
@@ -114,7 +116,7 @@ Vec2 AtlasPacker::EstimateAtlasSize(const ImageData& images)
 	}
 	Vec2 size{ 16, 16 };
 	while (size.x * size.y < stats_.total_images_area) {
-		size.x == size.y ? size.x *= 2 : size.y = size.x;
+		size.x == size.y ? (size.x += pow_of_2_ ? size.x : 2) : size.y = size.x;
 	}
 	return size;
 }

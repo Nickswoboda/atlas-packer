@@ -209,6 +209,8 @@ void Application::RenderOutputState()
 		ImGuiErrorText("Unable to create atlas");
 	}
 	else {
+
+		ImGui::Text("Width: %i, Height: %i", image_data_.sizes_[atlas_index_].x, image_data_.sizes_[atlas_index_].y);
 		int aspect_ratio = image_data_.sizes_[atlas_index_].x / image_data_.sizes_[atlas_index_].y;
 		ImGui::Image((void*)(intptr_t)atlas_texture_ID_, { 256.0f * aspect_ratio, 256.0f }, { 0,0 }, { 1,1 }, { 1,1,1,1 }, { 1,1,1,1 });
 

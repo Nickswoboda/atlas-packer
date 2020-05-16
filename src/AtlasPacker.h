@@ -22,7 +22,7 @@ public:
 	nlohmann::json CreateJsonFile(const ImageData& images);
 	bool PackAtlasRects(ImageData& images, Vec2 size);
 	Vec2 EstimateAtlasSize(const ImageData& images);
-
+	
 	int max_width_ = 4096;
 	int max_height_ = 4096;
 
