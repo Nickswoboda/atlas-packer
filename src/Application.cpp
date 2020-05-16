@@ -210,8 +210,8 @@ void Application::RenderOutputState()
 	}
 	else {
 
-		ImGui::Text("Width: %i, Height: %i", image_data_.sizes_[atlas_index_].x, image_data_.sizes_[atlas_index_].y);
-		int aspect_ratio = image_data_.sizes_[atlas_index_].x / image_data_.sizes_[atlas_index_].y;
+		ImGui::Text("Width: %i, Height: %i", image_data_.rects_[atlas_index_].w, image_data_.rects_[atlas_index_].h);
+		int aspect_ratio = image_data_.rects_[atlas_index_].w / image_data_.rects_[atlas_index_].h;
 		ImGui::Image((void*)(intptr_t)atlas_texture_ID_, { 256.0f * aspect_ratio, 256.0f }, { 0,0 }, { 1,1 }, { 1,1,1,1 }, { 1,1,1,1 });
 
 		ImGui::Text("Stats:");
@@ -328,11 +328,11 @@ void Application::Save(const std::string& save_folder)
 
 	if (save_file_format_ == SaveFileFormat::PNG) {
 		std::string full_path(save_folder + "/atlas.png");
-		success = stbi_write_png(full_path.c_str(), image_data_.sizes_[atlas_index_].x, image_data_.sizes_[atlas_index_].y, 4, (void*)image_data_.data_[atlas_index_], image_data_.sizes_[atlas_index_].x * 4);
+		success = stbi_write_png(full_path.c_str(), image_data_.rects_[atlas_index_].w, image_data_.rects_[atlas_index_].h, 4, (void*)image_data_.data_[atlas_index_], image_data_.rects_[atlas_index_].w * 4);
 	}
 	else {
 		std::string full_path(save_folder + "/atlas.jpg");
-		success = stbi_write_jpg(full_path.c_str(), image_data_.sizes_[atlas_index_].x, image_data_.sizes_[atlas_index_].y, 4, (void*)image_data_.data_[atlas_index_], jpg_quality_);
+		success = stbi_write_jpg(full_path.c_str(), image_data_.rects_[atlas_index_].w, image_data_.rects_[atlas_index_].h, 4, (void*)image_data_.data_[atlas_index_], jpg_quality_);
 	}
 	if (!success) {
 		std::cout << "Unable to save image";
@@ -355,7 +355,7 @@ unsigned int Application::CreateTexture(int image_index)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
 	glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image_data_.sizes_[image_index].x, image_data_.sizes_[image_index].y, 0, GL_RGBA, GL_UNSIGNED_BYTE, image_data_.data_[image_index]);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image_data_.rects_[image_index].w, image_data_.rects_[image_index].h, 0, GL_RGBA, GL_UNSIGNED_BYTE, image_data_.data_[image_index]);
 
 	return image_texture;
 }

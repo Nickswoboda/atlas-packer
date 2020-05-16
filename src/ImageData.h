@@ -10,11 +10,18 @@ struct Vec2
 	int y = 0;
 };
 
+struct Rect
+{
+	int x = 0;
+	int y = 0;
+	int w = 0;
+	int h = 0;
+};
+
 constexpr int MAX_IMAGES = 512;
 struct ImageData
 {
-	Vec2 sizes_[MAX_IMAGES];
-	Vec2 pos_[MAX_IMAGES];
+	Rect rects_[MAX_IMAGES];
 	unsigned char* data_[MAX_IMAGES];
 	std::string paths_[MAX_IMAGES];
 

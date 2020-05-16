@@ -22,7 +22,8 @@ void GetImageData(const std::vector<std::string>& paths, ImageData& image_data)
 		std::string file_name = std::filesystem::path(paths[i]).generic_u8string();
 		
 		image_data.paths_[i] = file_name;
-		image_data.sizes_[i] = { width, height };
+		image_data.rects_[i].w = width;
+		image_data.rects_[i].h = height;
 		image_data.data_[i] = data;
 
 		++image_data.num_images_;

@@ -13,12 +13,12 @@ void CreateAtlasImageData(ImageData& images, int width, int height)
 
 	for (int i = 0; i < images.num_images_; ++i) {
 
-		int image_pitch = images.sizes_[i].x * channels;
+		int image_pitch = images.rects_[i].w * channels;
 
-		int pen_x = images.pos_[i].x * channels;
-		int pen_y = images.pos_[i].y;
+		int pen_x = images.rects_[i].x * channels;
+		int pen_y = images.rects_[i].y;
 
-		for (int row = 0; row < images.sizes_[i].y; ++row) {
+		for (int row = 0; row < images.rects_[i].h; ++row) {
 			for (int col = 0; col < image_pitch; ++col) {
 				int x = pen_x + col;
 				int y = pen_y + row;
@@ -28,7 +28,7 @@ void CreateAtlasImageData(ImageData& images, int width, int height)
 	}
 
 	//set atlas data to be at the end of all images
-	images.sizes_[images.num_images_] = { width, height };
+	images.rects_[images.num_images_] = { 0, 0, width, height };
 	images.data_[images.num_images_] = pixels;
 }
 
@@ -67,10 +67,10 @@ nlohmann::json AtlasPacker::CreateJsonFile(const ImageData& images)
 	nlohmann::json json;
 
 	for (int i = 0; i < images.num_images_; ++i) {
-		json[images.paths_[i]]["x_pos"] = images.paths_[i];
-		json[images.paths_[i]]["y_pos"] = images.paths_[i];
-		json[images.paths_[i]]["width"] = images.sizes_[i].x;
-		json[images.paths_[i]]["height"] = images.sizes_[i].y;
+		json[images.paths_[i]]["x_pos"] = images.rects_[i].x;
+		json[images.paths_[i]]["y_pos"] = images.rects_[i].y;
+		json[images.paths_[i]]["width"] = images.rects_[i].w;
+		json[images.paths_[i]]["height"] = images.rects_[i].h;
 	}
 
 	return json;
@@ -81,27 +81,28 @@ bool AtlasPacker::PackAtlasRects(ImageData& images, Vec2 size)
 	//sort indices of sizes as if they were sorted by height, but without actually sorting the underlying structure
 	std::vector<int> sort_indices(images.num_images_);
 	std::iota(sort_indices.begin(), sort_indices.end(), 0);
-	std::sort(sort_indices.begin(), sort_indices.end(), [&images](int i, int j) { return images.sizes_[i].y > images.sizes_[j].y; });
+	std::sort(sort_indices.begin(), sort_indices.end(), [&images](int i, int j) { return images.rects_[i].h > images.rects_[j].h; });
 
 	int pen_x = 0, pen_y = 0;
-	int next_pen_y = images.sizes_[sort_indices[0]].y;
+	int next_pen_y = images.rects_[sort_indices[0]].h;
 
 	for (int i = 0; i < images.num_images_; ++i) {
 
-		while (pen_x + images.sizes_[sort_indices[i]].x >= size.x) {
+		while (pen_x + images.rects_[sort_indices[i]].w >= size.x) {
 			pen_x = 0;
 			pen_y += next_pen_y + pixel_padding_;
-			next_pen_y = images.sizes_[sort_indices[i]].y;
+			next_pen_y = images.rects_[sort_indices[i]].h;
 
 			//unable to fit everything in atlas
-			if (pen_y + images.sizes_[sort_indices[i]].y >= size.y) {
+			if (pen_y + images.rects_[sort_indices[i]].h >= size.y) {
 				return false;
 			}
 		}
 
-		images.pos_[sort_indices[i]] = { pen_x, pen_y };
+		images.rects_[sort_indices[i]].x = pen_x;
+		images.rects_[sort_indices[i]].y = pen_y;
 
-		pen_x += images.sizes_[sort_indices[i]].x + pixel_padding_;
+		pen_x += images.rects_[sort_indices[i]].w + pixel_padding_;
 	}
 
 	return true;
@@ -112,7 +113,7 @@ Vec2 AtlasPacker::EstimateAtlasSize(const ImageData& images)
 	stats_.total_images_area = 0;
 
 	for (int i = 0; i < images.num_images_; ++i){
-		stats_.total_images_area += images.sizes_[i].x * images.sizes_[i].y;
+		stats_.total_images_area += images.rects_[i].w * images.rects_[i].h;
 	}
 	Vec2 size{ 16, 16 };
 	while (size.x * size.y < stats_.total_images_area) {
