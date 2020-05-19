@@ -37,26 +37,36 @@ int AtlasPacker::CreateAtlas(ImageData& image_data)
 {
 	std::chrono::steady_clock::time_point start_time = std::chrono::high_resolution_clock::now();
 
-	Vec2 size = EstimateAtlasSize(image_data);
+	
+	if (fixed_size) {
+		size_ = { max_width_, max_height_ };
+		PackAtlasRects(image_data, size_);
+	}
+	else {
+		size_ = EstimateAtlasSize(image_data);
 
-	//try algo, if can't fit everything, increase size and try again
-	while (!PackAtlasRects(image_data, size)) {
+		//try algo, if can't fit everything, increase size and try again
+		while (!PackAtlasRects(image_data, size_)) {
 
-		//every iteration increase either by 64px or double size if pow_of_two is enabled
-		size.x == size.y ? (size.x += pow_of_2_ ? size.x : 64) : size.y = size.x;
+			//every iteration increase either by 64px or double size if pow_of_two is enabled
+			size_.x == size_.y ? (size_.x += pow_of_2_ ? size_.x : 64) : size_.y = size_.x;
+			if (force_square) {
+				size_.y = size_.x;
+			}
 
-		if (size.x > max_width_ || size.y > max_height_) {
-			return -1;
+			if (size_.x > max_width_ || size_.y > max_height_) {
+				return -1;
+			}
 		}
 	}
 
-	stats_.atlas_area = size.x * size.y;
+	stats_.atlas_area = size_.x * size_.y;
 	stats_.unused_area = stats_.atlas_area - stats_.total_images_area;
 	stats_.packing_efficiency = (stats_.total_images_area / (float)stats_.atlas_area) * 100;
 
 	std::chrono::steady_clock::time_point end_time = std::chrono::high_resolution_clock::now();
 	save_data_ = GetAtlasData(image_data);
-	CreateAtlasImageData(image_data, size.x, size.y);
+	CreateAtlasImageData(image_data, size_.x, size_.y);
 
 	stats_.time_elapsed_in_ms = std::chrono::duration<double, std::milli>(end_time - start_time).count();
 
@@ -118,7 +128,14 @@ Vec2 AtlasPacker::EstimateAtlasSize(const ImageData& images)
 	}
 	Vec2 size{ 16, 16 };
 	while (size.x * size.y < stats_.total_images_area) {
-		size.x == size.y ? (size.x += pow_of_2_ ? size.x : 2) : size.y = size.x;
+		if (pow_of_2_) {
+			size.x *= 2;
+			size.y *= 2;
+		}
+		else {
+			size.x += 2;
+			size.y += 2;
+		}
 	}
 	return size;
 }

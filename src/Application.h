@@ -40,7 +40,7 @@ public:
 	void Save(const std::string& save_folder);
 
 	void UnpackInputFolders();
-	unsigned int Application::CreateTexture(int image_index);
+	unsigned int Application::CreateAtlasTexture(int image_index);
 
 private:
 	bool running_ = true;

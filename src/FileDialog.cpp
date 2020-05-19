@@ -54,10 +54,11 @@ void FileDialog::Render()
 {
 	ImGui::TextWrapped(current_dir_path_.c_str());
 
+	ImGui::BeginChildFrame(1, { (float)width_, (float)height_ });
+
+	int index = 0;
+	static int selected_index = -1;
 	if (prev_paths_.empty()) {
-		ImGui::BeginChildFrame(1, { (float)width_, (float)height_ });
-		int index = 0;
-		static int selected_index = -1;
 		for (const auto& drive : drives_) {
 			if (ImGui::Selectable(drive.c_str(), selected_index == index, ImGuiSelectableFlags_AllowDoubleClick)) {
 
@@ -73,13 +74,8 @@ void FileDialog::Render()
 			}
 			++index;
 		}
-		ImGui::EndChildFrame();
 	}
-	else {
-		ImGui::BeginChildFrame(1, { (float)width_, (float)height_ });
-
-		int index = 0;
-		static int selected_index = -1;
+	else{
 		for (const auto& file : current_dir_files_) {
 			if (ImGui::Selectable(file.c_str(), selected_index == index, ImGuiSelectableFlags_AllowDoubleClick)) {
 
@@ -99,13 +95,13 @@ void FileDialog::Render()
 
 				selected_index = index;
 				selected_path_ = current_dir_path_ + "/" + file;
-
 			}
 			++index;
 		}
-
-		ImGui::EndChildFrame();
 	}
+
+	ImGui::EndChildFrame();
+	
 }
 
 

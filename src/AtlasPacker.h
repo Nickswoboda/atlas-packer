@@ -24,10 +24,13 @@ public:
 	
 	int max_width_ = 4096;
 	int max_height_ = 4096;
+	bool fixed_size = false;
+	bool force_square = false;
 
 	int pixel_padding_ = 0;
 	bool pow_of_2_ = false;
 	
+	Vec2 size_;
 	std::string save_data_;
 	Stats stats_;
 };

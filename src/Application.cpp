@@ -115,6 +115,7 @@ void Application::RenderInputState()
 {
 	input_file_dialog_.Render();
 
+	//input item frame
 	ImGui::SameLine();
 	ImGui::BeginChildFrame(2, { window_.width_ / 2.0f, window_.height_ / 3.0f });
 	int index = 0;
@@ -129,6 +130,7 @@ void Application::RenderInputState()
 		++index;
 	}
 	ImGui::EndChildFrame();
+
 
 	if (ImGui::Button("Prev")) {
 		input_file_dialog_.GoBack();
@@ -151,41 +153,37 @@ void Application::RenderInputState()
 		input_items_.clear();
 	}
 
-	ImGui::Text("Pixel Padding: ");
-	ImGui::SameLine();
-	if (ImGui::InputInt("##Padding", &atlas_packer_.pixel_padding_)) {
-		if (atlas_packer_.pixel_padding_ < 0) {
-			atlas_packer_.pixel_padding_ = 0;
-		}
-		if (atlas_packer_.pixel_padding_ > 32) {
-			atlas_packer_.pixel_padding_ = 32;
-		}
-	}
+
+	ImGui::Separator();
 	ImGui::Text("Max Width: ");
 	ImGui::SameLine();
 	if (ImGui::InputInt("##MaxWidth", &atlas_packer_.max_width_)) {
-		if (atlas_packer_.max_width_ < 0) {
-			atlas_packer_.max_width_ = 0;
-		}
-		if (atlas_packer_.max_width_ > 4096) {
-			atlas_packer_.max_width_ = 4096;
-		}
+		atlas_packer_.max_width_ = std::clamp(atlas_packer_.max_width_, 0, 4096);
 	}
+
 
 	ImGui::Text("Max Height: ");
 	ImGui::SameLine();
 	if (ImGui::InputInt("##MaxHeight", &atlas_packer_.max_height_)) {
-		if (atlas_packer_.max_height_ < 0) {
-			atlas_packer_.max_height_ = 0;
-		}
-		if (atlas_packer_.max_height_ > 4096) {
-			atlas_packer_.max_height_ = 4096;
-		}
+		atlas_packer_.max_height_ = std::clamp(atlas_packer_.max_height_, 0, 4096);
 	}
+	ImGui::Text("Fixed Size: ");
+	ImGui::SameLine();
+	ImGui::Checkbox("##FixedSize", &atlas_packer_.fixed_size);
+	ImGui::Text("Force Square: ");
+	ImGui::SameLine();
+	ImGui::Checkbox("##ForceSquare", &atlas_packer_.force_square);
 
+	ImGui::Separator();
 	ImGui::Text("Power of 2: ");
 	ImGui::SameLine();
 	ImGui::Checkbox("##Powof2", &atlas_packer_.pow_of_2_);
+
+	ImGui::Text("Pixel Padding: ");
+	ImGui::SameLine();
+	if (ImGui::InputInt("##Padding", &atlas_packer_.pixel_padding_)) {
+		atlas_packer_.pixel_padding_ = std::clamp(atlas_packer_.pixel_padding_, 0, 32);
+	}
 
 	if (input_items_.empty()) {
 		ImGuiErrorText("You must add an item to submit");
@@ -194,8 +192,11 @@ void Application::RenderInputState()
 		UnpackInputFolders();
 		if (!unpacked_items_.empty()) {
 			GetImageData(unpacked_items_, image_data_);
+			//returns index of image_data_ that the atlas image data resides. equivalent to image_data_.num_images
 			atlas_index_ = atlas_packer_.CreateAtlas(image_data_);
-			atlas_texture_ID_ = CreateTexture(atlas_index_);
+
+			//used to display preview in output window
+			atlas_texture_ID_ = CreateAtlasTexture(atlas_index_);
 			PushState(State::Output);
 		}
 	}
@@ -214,6 +215,7 @@ void Application::RenderOutputState()
 		int aspect_ratio = image_data_.rects_[atlas_index_].w / image_data_.rects_[atlas_index_].h;
 		ImGui::Image((void*)(intptr_t)atlas_texture_ID_, { 256.0f * aspect_ratio, 256.0f }, { 0,0 }, { 1,1 }, { 1,1,1,1 }, { 1,1,1,1 });
 
+		ImGui::Separator();
 		ImGui::Text("Stats:");
 		ImGui::Text("Unused area: %i px", atlas_packer_.stats_.unused_area);
 		ImGui::Text("Packing efficiency: %.2f%%", atlas_packer_.stats_.packing_efficiency);
@@ -251,7 +253,6 @@ void Application::RenderOutputState()
 		else if (ImGui::Selectable(".jpg")) {
 			save_file_format_ = SaveFileFormat::JPG;
 		}
-
 		ImGui::EndCombo();
 	}
 
@@ -336,13 +337,14 @@ void Application::Save(const std::string& save_folder)
 	}
 	if (!success) {
 		std::cout << "Unable to save image";
+		return;
 	}
 
 	std::ofstream file(save_folder + "/atlas-data.txt");
 	file << atlas_packer_.save_data_ << std::endl;
 }
 
-unsigned int Application::CreateTexture(int image_index)
+unsigned int Application::CreateAtlasTexture(int image_index)
 {
 	if (image_data_.data_[image_index] == nullptr) {
 		return -1;
@@ -373,6 +375,7 @@ void Application::UnpackInputFolders()
 
 	static int max_processed_folders = 20;
 	int num_processed_folders = 0;
+
 	while (!unpacked_folders.empty() && num_processed_folders <= max_processed_folders) {
 		auto current_folder = unpacked_folders[0];
 		unpacked_folders.erase(unpacked_folders.begin());
