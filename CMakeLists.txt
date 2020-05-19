@@ -23,7 +23,6 @@ PUBLIC
 	"dependencies/GLFW/include"
 	"dependencies/GLAD/include"
 	"dependencies/stb_image"
-	"dependencies/nlohmann"
 	"dependencies/imgui")
 
 add_subdirectory("dependencies/GLFW")

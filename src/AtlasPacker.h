@@ -3,7 +3,6 @@
 #include "ImageData.h"
 
 #include <unordered_map>
-#include <json.hpp>
 
 struct Stats
 {
@@ -19,7 +18,7 @@ class AtlasPacker
 {
 public:
 	int CreateAtlas(ImageData& image_data);
-	nlohmann::json CreateJsonFile(const ImageData& images);
+	std::string GetAtlasData(const ImageData& images);
 	bool PackAtlasRects(ImageData& images, Vec2 size);
 	Vec2 EstimateAtlasSize(const ImageData& images);
 	
@@ -28,8 +27,7 @@ public:
 
 	int pixel_padding_ = 0;
 	bool pow_of_2_ = false;
-
-	nlohmann::json data_json_;
 	
+	std::string save_data_;
 	Stats stats_;
 };

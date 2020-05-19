@@ -1,8 +1,9 @@
 #include "AtlasPacker.h"
 
-#include <algorithm>
 #include <iostream>
+#include <sstream>
 #include <chrono>
+#include <numeric>
 
 void CreateAtlasImageData(ImageData& images, int width, int height)
 {
@@ -54,7 +55,7 @@ int AtlasPacker::CreateAtlas(ImageData& image_data)
 	stats_.packing_efficiency = (stats_.total_images_area / (float)stats_.atlas_area) * 100;
 
 	std::chrono::steady_clock::time_point end_time = std::chrono::high_resolution_clock::now();
-	data_json_ = CreateJsonFile(image_data);
+	save_data_ = GetAtlasData(image_data);
 	CreateAtlasImageData(image_data, size.x, size.y);
 
 	stats_.time_elapsed_in_ms = std::chrono::duration<double, std::milli>(end_time - start_time).count();
@@ -62,18 +63,18 @@ int AtlasPacker::CreateAtlas(ImageData& image_data)
 	return image_data.num_images_;
 }
 
-nlohmann::json AtlasPacker::CreateJsonFile(const ImageData& images)
+std::string AtlasPacker::GetAtlasData(const ImageData& images)
 {
-	nlohmann::json json;
-
+	std::stringstream data;
 	for (int i = 0; i < images.num_images_; ++i) {
-		json[images.paths_[i]]["x_pos"] = images.rects_[i].x;
-		json[images.paths_[i]]["y_pos"] = images.rects_[i].y;
-		json[images.paths_[i]]["width"] = images.rects_[i].w;
-		json[images.paths_[i]]["height"] = images.rects_[i].h;
+		data << images.paths_[i] << ", ";
+		data << "x pos: " << images.rects_[i].x << ", ";
+		data << "y pos: " << images.rects_[i].y << ", ";
+		data << "width: " << images.rects_[i].w << ", ";
+		data << "height: " << images.rects_[i].h << "\n";
 	}
 
-	return json;
+	return data.str();
 }
 
 bool AtlasPacker::PackAtlasRects(ImageData& images, Vec2 size)

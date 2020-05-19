@@ -338,8 +338,8 @@ void Application::Save(const std::string& save_folder)
 		std::cout << "Unable to save image";
 	}
 
-	std::ofstream file(save_folder + "/atlas-data.json");
-	file << std::setw(4) << atlas_packer_.data_json_ << std::endl;
+	std::ofstream file(save_folder + "/atlas-data.txt");
+	file << atlas_packer_.save_data_ << std::endl;
 }
 
 unsigned int Application::CreateTexture(int image_index)

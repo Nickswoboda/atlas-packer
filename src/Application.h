@@ -4,8 +4,6 @@
 #include "FileDialog.h"
 #include "AtlasPacker.h"
 
-#include <json.hpp>
-
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
