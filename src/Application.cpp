@@ -169,10 +169,10 @@ void Application::RenderInputState()
 	}
 	ImGui::Text("Fixed Size: ");
 	ImGui::SameLine();
-	ImGui::Checkbox("##FixedSize", &atlas_packer_.fixed_size);
+	ImGui::Checkbox("##FixedSize", &atlas_packer_.fixed_size_);
 	ImGui::Text("Force Square: ");
 	ImGui::SameLine();
-	ImGui::Checkbox("##ForceSquare", &atlas_packer_.force_square);
+	ImGui::Checkbox("##ForceSquare", &atlas_packer_.force_square_);
 
 	ImGui::Separator();
 	ImGui::Text("Power of 2: ");
@@ -183,6 +183,31 @@ void Application::RenderInputState()
 	ImGui::SameLine();
 	if (ImGui::InputInt("##Padding", &atlas_packer_.pixel_padding_)) {
 		atlas_packer_.pixel_padding_ = std::clamp(atlas_packer_.pixel_padding_, 0, 32);
+	}
+
+	ImGui::Separator();
+	ImGui::Text("Algorith: ");
+	ImGui::SameLine();
+	if (ImGui::BeginCombo("##Algorithm", atlas_packer_.algo_ == Algorithm::Shelf ? "Shelf" : "MaxRects")) {
+		if (ImGui::Selectable("Shelf")) {
+			atlas_packer_.algo_ = Algorithm::Shelf;
+		}
+		else if (ImGui::Selectable("MaxRects")) {
+			atlas_packer_.algo_ = Algorithm::MaxRects;
+		}
+		ImGui::EndCombo();
+	}
+
+	ImGui::Text("Atlas Size Solver: ");
+	ImGui::SameLine();
+	if (ImGui::BeginCombo("##BoxSolver", atlas_packer_.size_solver_ == AtlasSizeSolver::Fast ? "Fast" : "Best Fit")) {
+		if (ImGui::Selectable("Fast")) {
+			atlas_packer_.size_solver_ = AtlasSizeSolver::Fast;
+		}
+		else if (ImGui::Selectable("Best Fit")) {
+			atlas_packer_.size_solver_ = AtlasSizeSolver::BestFit;
+		}
+		ImGui::EndCombo();
 	}
 
 	if (input_items_.empty()) {
@@ -200,6 +225,8 @@ void Application::RenderInputState()
 			PushState(State::Output);
 		}
 	}
+
+	
 }
 
 void Application::RenderOutputState()
@@ -341,7 +368,7 @@ void Application::Save(const std::string& save_folder)
 	}
 
 	std::ofstream file(save_folder + "/atlas-data.txt");
-	file << atlas_packer_.save_data_ << std::endl;
+	file << atlas_packer_.metadata_ << std::endl;
 }
 
 unsigned int Application::CreateAtlasTexture(int image_index)

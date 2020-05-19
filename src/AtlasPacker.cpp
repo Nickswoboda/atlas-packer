@@ -37,43 +37,66 @@ int AtlasPacker::CreateAtlas(ImageData& image_data)
 {
 	std::chrono::steady_clock::time_point start_time = std::chrono::high_resolution_clock::now();
 
-	
-	if (fixed_size) {
+	if (fixed_size_) {
 		size_ = { max_width_, max_height_ };
-		PackAtlasRects(image_data, size_);
+	}
+	else if (size_solver_ == AtlasSizeSolver::Fast) {
+		size_ = EstimateAtlasSize(image_data);
 	}
 	else {
-		size_ = EstimateAtlasSize(image_data);
+		GetPossibleContainers(image_data, possible_containers_);
+		if (!possible_containers_.empty()) {
+			size_ = possible_containers_[0];
+		}
+	}
 
-		//try algo, if can't fit everything, increase size and try again
-		while (!PackAtlasRects(image_data, size_)) {
-
-			//every iteration increase either by 64px or double size if pow_of_two is enabled
-			size_.x == size_.y ? (size_.x += pow_of_2_ ? size_.x : 64) : size_.y = size_.x;
-			if (force_square) {
-				size_.y = size_.x;
+	if (size_solver_ == AtlasSizeSolver::BestFit) {
+		for (const auto& size : possible_containers_) {
+			if (PackAtlas(image_data, size)) {
+				break;
 			}
+		}
+		return -1;
+	}
+	else {
+		while (!PackAtlas(image_data, size_)) {
 
-			if (size_.x > max_width_ || size_.y > max_height_) {
+			if (fixed_size_) {
 				return -1;
+			}
+			else{
+				//every iteration increase either by 64px or double size if pow_of_two is enabled
+				size_.x == size_.y ? (size_.x += pow_of_2_ ? size_.x : 64) : size_.y = size_.x;
+				if (force_square_) {
+					size_.y = size_.x;
+				}
+
+				if (size_.x > max_width_ || size_.y > max_height_) {
+					return -1;
+				}
 			}
 		}
 	}
 
+
+	std::chrono::steady_clock::time_point end_time = std::chrono::high_resolution_clock::now();
+
 	stats_.atlas_area = size_.x * size_.y;
 	stats_.unused_area = stats_.atlas_area - stats_.total_images_area;
 	stats_.packing_efficiency = (stats_.total_images_area / (float)stats_.atlas_area) * 100;
+	stats_.time_elapsed_in_ms = std::chrono::duration<double, std::milli>(end_time - start_time).count();
 
-	std::chrono::steady_clock::time_point end_time = std::chrono::high_resolution_clock::now();
-	save_data_ = GetAtlasData(image_data);
+	//contains x, y, w, h of all individual textures in atlas
+	metadata_ = GetAtlasMetadata(image_data);
+
 	CreateAtlasImageData(image_data, size_.x, size_.y);
 
-	stats_.time_elapsed_in_ms = std::chrono::duration<double, std::milli>(end_time - start_time).count();
+	possible_containers_.clear();
 
 	return image_data.num_images_;
 }
 
-std::string AtlasPacker::GetAtlasData(const ImageData& images)
+std::string AtlasPacker::GetAtlasMetadata(const ImageData& images)
 {
 	std::stringstream data;
 	for (int i = 0; i < images.num_images_; ++i) {
@@ -87,7 +110,12 @@ std::string AtlasPacker::GetAtlasData(const ImageData& images)
 	return data.str();
 }
 
-bool AtlasPacker::PackAtlasRects(ImageData& images, Vec2 size)
+bool AtlasPacker::PackAtlas(ImageData& images, Vec2 size)
+{
+	return algo_ == Algorithm::Shelf ? PackAtlasShelf(images, size) : PackAtlasMaxRects(images, size);
+}
+
+bool AtlasPacker::PackAtlasShelf(ImageData& images, Vec2 size)
 {
 	//sort indices of sizes as if they were sorted by height, but without actually sorting the underlying structure
 	std::vector<int> sort_indices(images.num_images_);
@@ -117,6 +145,16 @@ bool AtlasPacker::PackAtlasRects(ImageData& images, Vec2 size)
 	}
 
 	return true;
+}
+
+bool AtlasPacker::PackAtlasMaxRects(ImageData& images, Vec2 size)
+{
+	return false;
+}
+
+void AtlasPacker::GetPossibleContainers(const ImageData& images, std::vector<Vec2>& possible_containers)
+{
+	possible_containers.push_back({ 500, 500 });
 }
 
 Vec2 AtlasPacker::EstimateAtlasSize(const ImageData& images)

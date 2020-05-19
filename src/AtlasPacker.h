@@ -14,23 +14,42 @@ struct Stats
 
 };
 
+enum class Algorithm 
+{
+	Shelf,
+	MaxRects
+};
+
+enum class AtlasSizeSolver
+{
+	Fast,
+	BestFit
+};
 class AtlasPacker
 {
 public:
 	int CreateAtlas(ImageData& image_data);
-	std::string GetAtlasData(const ImageData& images);
-	bool PackAtlasRects(ImageData& images, Vec2 size);
+	std::string GetAtlasMetadata(const ImageData& images);
+
+	bool PackAtlas(ImageData& images, Vec2 size);
+	bool PackAtlasShelf(ImageData& images, Vec2 size);
+	bool PackAtlasMaxRects(ImageData& images, Vec2 size);
+
+	void GetPossibleContainers(const ImageData& images, std::vector<Vec2>& possible_containers);
 	Vec2 EstimateAtlasSize(const ImageData& images);
 	
 	int max_width_ = 4096;
 	int max_height_ = 4096;
-	bool fixed_size = false;
-	bool force_square = false;
+	bool fixed_size_ = false;
+	bool force_square_ = false;
 
 	int pixel_padding_ = 0;
 	bool pow_of_2_ = false;
 	
+	Algorithm algo_ = Algorithm::Shelf;
+	AtlasSizeSolver size_solver_ = AtlasSizeSolver::Fast;
+	std::vector<Vec2> possible_containers_;
 	Vec2 size_;
-	std::string save_data_;
+	std::string metadata_;
 	Stats stats_;
 };
