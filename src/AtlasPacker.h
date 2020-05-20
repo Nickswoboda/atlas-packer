@@ -35,7 +35,7 @@ public:
 	bool PackAtlasShelf(ImageData& images, Vec2 size);
 	bool PackAtlasMaxRects(ImageData& images, Vec2 size);
 
-	void GetPossibleContainers(const ImageData& images, std::vector<Vec2>& possible_containers);
+	void GetPossibleContainers(const ImageData& images, std::vector<Vec2>& possible_sizes);
 	Vec2 EstimateAtlasSize(const ImageData& images);
 	
 	int max_width_ = 4096;
@@ -48,7 +48,7 @@ public:
 	
 	Algorithm algo_ = Algorithm::Shelf;
 	AtlasSizeSolver size_solver_ = AtlasSizeSolver::Fast;
-	std::vector<Vec2> possible_containers_;
+	std::vector<Vec2> possible_sizes_;
 	Vec2 size_;
 	std::string metadata_;
 	Stats stats_;
