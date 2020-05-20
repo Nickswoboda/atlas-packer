@@ -67,5 +67,6 @@ private:
 
 	std::stack<State> state_stack_;
 
+	Vec2 preview_size_;
 	unsigned int atlas_texture_ID_ = -1;
 };

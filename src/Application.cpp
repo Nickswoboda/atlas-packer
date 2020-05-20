@@ -222,11 +222,19 @@ void Application::RenderInputState()
 
 			//used to display preview in output window
 			atlas_texture_ID_ = CreateAtlasTexture(atlas_index_);
+
+
+			if (image_data_.rects_[atlas_index_].w <= 512 && image_data_.rects_[atlas_index_].h <= 512) {
+				preview_size_ = { image_data_.rects_[atlas_index_].w, image_data_.rects_[atlas_index_].h };
+			}
+			else {
+				float aspect_ratio = image_data_.rects_[atlas_index_].w / (float)image_data_.rects_[atlas_index_].h;
+				preview_size_ = aspect_ratio < 1 ? Vec2{ (int)(512 * aspect_ratio), 512 } : Vec2{ 512, (int)(512 * (1 / aspect_ratio)) };
+			}
+
 			PushState(State::Output);
 		}
 	}
-
-	
 }
 
 void Application::RenderOutputState()
@@ -239,8 +247,9 @@ void Application::RenderOutputState()
 	else {
 
 		ImGui::Text("Width: %i, Height: %i", image_data_.rects_[atlas_index_].w, image_data_.rects_[atlas_index_].h);
-		int aspect_ratio = image_data_.rects_[atlas_index_].w / image_data_.rects_[atlas_index_].h;
-		ImGui::Image((void*)(intptr_t)atlas_texture_ID_, { 256.0f * aspect_ratio, 256.0f }, { 0,0 }, { 1,1 }, { 1,1,1,1 }, { 1,1,1,1 });
+
+		ImGui::Image((void*)(intptr_t)atlas_texture_ID_, { (float)preview_size_.x, (float)preview_size_.y }, { 0,0 }, { 1,1 }, { 1,1,1,1 }, { 1,1,1,1 });
+
 
 		ImGui::Separator();
 		ImGui::Text("Stats:");
