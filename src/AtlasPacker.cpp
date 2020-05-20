@@ -46,14 +46,24 @@ int AtlasPacker::CreateAtlas(ImageData& image_data)
 
 	if (size_solver_ == AtlasSizeSolver::BestFit) {
 		GetPossibleContainers(image_data, possible_sizes_);
-		for (int i = 0; i < possible_sizes_.size(); ++i) {
-			if (PackAtlas(image_data, possible_sizes_[i])) {
-				size_ = possible_sizes_[i];
-				break;
-			}
 
-			if ( i == possible_sizes_.size() - 1) {
-				return -1;
+		bool success = false;
+		while (!success) {
+			std::pop_heap(possible_sizes_.begin(), possible_sizes_.end(), [](Vec2 a, Vec2 b) { return a.x * a.y > b.x * b.y; });
+			Vec2 best_fit = possible_sizes_.back();
+			possible_sizes_.pop_back();
+
+			if (!PackAtlas(image_data, best_fit)) {
+				++best_fit.x;
+				if (best_fit.x > 4096) {
+					return -1;
+				}
+				possible_sizes_.push_back(best_fit);
+				std::push_heap(possible_sizes_.begin(), possible_sizes_.end(), [](Vec2 a, Vec2 b) { return a.x * a.y > b.x * b.y; });
+			}
+			else {
+				success = true;
+				size_ = best_fit;
 			}
 		}
 	}
@@ -239,11 +249,9 @@ void AtlasPacker::GetPossibleContainers(const ImageData& images, std::vector<Vec
 {
 	int min_width = 0;
 	int min_height = 0;
-	int max_width = 0;
 	int max_height = 0;
 	stats_.total_images_area = 0;
 	for (int i = 0; i < images.num_images_; ++i) {
-		max_width += images.rects_[i].w;
 		if (images.rects_[i].w > min_width) {
 			min_width = images.rects_[i].w;
 		}
@@ -256,19 +264,14 @@ void AtlasPacker::GetPossibleContainers(const ImageData& images, std::vector<Vec
 		}
 	}
 
-	max_width = std::min(max_width, 4096);
 	max_height = std::min(max_height, 4096);
 
-	for (int w = min_width; w < max_width; ++w) {
-		for (int h = min_height; h < max_height; ++h) {
-			if ((w * h) > stats_.total_images_area) {
-				possible_sizes.push_back({ w, h });
-			}
-		}
+	for (int h = min_height; h < max_height; ++h) {
+		possible_sizes.push_back({ min_width, h });
 	}
-
+	
 	//sort by smallest area
-	std::sort(possible_sizes.begin(), possible_sizes.end(), [](Vec2 a, Vec2 b) { return a.x * a.y < b.x * b.y; });
+	std::make_heap(possible_sizes.begin(), possible_sizes.end(), [](Vec2 a, Vec2 b) { return a.x * a.y > b.x * b.y; });
 }
 
 Vec2 AtlasPacker::EstimateAtlasSize(const ImageData& images)
