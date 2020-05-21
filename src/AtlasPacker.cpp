@@ -267,7 +267,11 @@ void AtlasPacker::GetPossibleContainers(const ImageData& images, std::vector<Vec
 	max_height = std::min(max_height, 4096);
 
 	for (int h = min_height; h < max_height; ++h) {
-		possible_sizes.push_back({ min_width, h });
+		int w = min_width;
+		while (w * h < stats_.total_images_area) {
+			++w;
+		}
+		possible_sizes.push_back({ w, h });
 	}
 	
 	//sort by smallest area
