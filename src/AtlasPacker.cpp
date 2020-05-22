@@ -163,62 +163,74 @@ bool AtlasPacker::PackAtlasMaxRects(ImageData& images, Vec2 size)
 	std::iota(sorted_indices.begin(), sorted_indices.end(), 0);
 	std::sort(sorted_indices.begin(), sorted_indices.end(), [&images](int i, int j) { return images.rects_[i].w * images.rects_[i].h > images.rects_[j].w * images.rects_[j].h; });
 
-	//start with bounding box being available
-	std::vector<Rect> available_rects_;
-	available_rects_.push_back({ 0,0, size.x, size.y });
+	//start with whole atlas being available
+	std::vector<Rect> free_rects_;
+	free_rects_.push_back({ 0,0, size.x, size.y });
 
 	while (!sorted_indices.empty()) {
+
+		if (free_rects_.empty()) { 
+			return false; 
+		}
+
 		int curr_idx = sorted_indices[0];
 		sorted_indices.erase(sorted_indices.begin());
 
-		if (!available_rects_.empty()) {
-			for (int i = 0; i < available_rects_.size(); ++i) {
-				//if image can fit into available rect
-				if (images.rects_[curr_idx].w <= available_rects_[i].w && images.rects_[curr_idx].h <= available_rects_[i].h) {
+		Rect& new_rect = images.rects_[curr_idx];
 
-					auto& rect = images.rects_[curr_idx];
-					auto& box = available_rects_[i];
+		for (int i = 0; i < free_rects_.size(); ++i) {
+			//if image can fit into available rect
+			if (images.rects_[curr_idx].w <= free_rects_[i].w && images.rects_[curr_idx].h <= free_rects_[i].h){
 
-					rect.x = box.x;
-					rect.y = box.y;
-
-					int width = box.w - rect.w;
-					int height = box.h - rect.h;
-
-					Rect new_rect_1;
-					Rect new_rect_2;
-
-					if (width < height) {
-						new_rect_1 = { box.x + rect.w, box.y, box.w - rect.w, rect.h };
-						new_rect_2 = { box.x, box.y + rect.h, box.w, box.h - rect.h };
-					}
-					else {
-						new_rect_1 = { box.x + rect.w, box.y, box.w - rect.w, box.h };
-						new_rect_2 = { box.x, box.y + rect.h, rect.w, box.h - rect.h };
-					}
-
-					available_rects_.push_back(new_rect_1);
-					available_rects_.push_back(new_rect_2);
-
-					available_rects_.erase(available_rects_.begin() + i);
-
-					std::sort(available_rects_.begin(), available_rects_.end(), [&images](Rect a, Rect b) { return a.w * a.h < b.w* b.h; });
-					break;
-				}
-				else if (i == (available_rects_.size() - 1)) {
-					return false;
-				}
+				new_rect.x = free_rects_[i].x;
+				new_rect.y = free_rects_[i].y;
+			}
+			
+			//if reached the end of list, can not fit in any available rects
+			else if (i == (free_rects_.size() - 1)) {
+				return false;
 			}
 		}
-		else {
-			return false;
+
+		//split intersected free rects into at most 4 new smaller rects
+		for (int j = 0; j < free_rects_.size(); ++j) {
+			if (IntersectsRect(new_rect, free_rects_[j])){
+				auto split_rects = GetNewSplitRects(new_rect, free_rects_[j]);
+				free_rects_.insert(free_rects_.end(), split_rects.begin(), split_rects.end());
+				free_rects_.erase(free_rects_.begin() + j);
+				--j;
+			}
 		}
 
+		//prune any free rects that are completely enclosed within another
+		for (int j = 0; j < free_rects_.size(); ++j) {
+			for (int k = j + 1; k < free_rects_.size(); ++k) {
+				//if j is enclosed in k, remove j
+				if (free_rects_[j].x >= free_rects_[k].x && free_rects_[j].x + free_rects_[j].w <= free_rects_[k].x + free_rects_[k].w &&
+					free_rects_[j].y >= free_rects_[k].y && free_rects_[j].y + free_rects_[j].h <= free_rects_[k].y + free_rects_[k].h) {
+					free_rects_[j].x = -1;
+				}
+				else if (free_rects_[k].x >= free_rects_[j].x && free_rects_[k].x + free_rects_[k].w <= free_rects_[j].x + free_rects_[j].w &&
+					free_rects_[k].y >= free_rects_[j].y && free_rects_[k].y + free_rects_[k].h <= free_rects_[j].y + free_rects_[j].h) {
+					free_rects_[k].x = -1;
+				}
 
+			}
+		}
+
+		for (auto it = free_rects_.begin(); it != free_rects_.end();) {
+			if (it->x == -1) {
+				it = free_rects_.erase(it);
+			}
+			else {
+				++it;
+			}
+		}
+
+		std::sort(free_rects_.begin(), free_rects_.end(), [&images](Rect a, Rect b) { return a.w * a.h < b.w* b.h; });
 	}
 
-	//draw unused rects for debugging
-	for (const auto& rect : available_rects_) {
+	for (const auto& rect : free_rects_) {
 
 		unsigned char* data = new unsigned char[(size_t)rect.w * rect.h * 4]();
 		for (int row = 0; row < rect.h; ++row) {
@@ -240,6 +252,17 @@ bool AtlasPacker::PackAtlasMaxRects(ImageData& images, Vec2 size)
 		images.rects_[images.num_images_] = rect;
 		images.data_[images.num_images_] = data;
 		++images.num_images_;
+	}
+
+	return true;
+}
+
+bool AtlasPacker::IntersectsRect(Rect& new_rect, Rect& free_rect)
+{
+	//separating axis theorem
+	if (new_rect.x >= free_rect.x + free_rect.w || new_rect.x + new_rect.w <= free_rect.x ||
+		new_rect.y >= free_rect.y + free_rect.h || new_rect.y + new_rect.h <= free_rect.y) {
+		return false;
 	}
 
 	return true;
@@ -297,4 +320,41 @@ Vec2 AtlasPacker::EstimateAtlasSize(const ImageData& images)
 		}
 	}
 	return size;
+}
+
+std::vector<Rect> AtlasPacker::GetNewSplitRects(Rect& new_rect, Rect& free_rect)
+{
+	std::vector<Rect> split_rects;
+
+	//top rect
+	if (new_rect.y > free_rect.y){
+		Rect temp = free_rect;
+		temp.h = new_rect.y - free_rect.y;
+		split_rects.push_back(temp);
+	}
+
+	//bottom rect
+	if (free_rect.y + free_rect.h > new_rect.y + new_rect.h) {
+		Rect temp = free_rect;
+		temp.y = new_rect.y + new_rect.h;
+		temp.h = free_rect.y + free_rect.h - (new_rect.y + new_rect.h);
+		split_rects.push_back(temp);
+	}
+
+	//left rect
+	if (new_rect.x > free_rect.x) {
+		Rect temp = free_rect;
+		temp.w = new_rect.x - free_rect.x;
+		split_rects.push_back(temp);
+	}
+
+	//right rect
+	if (free_rect.x + free_rect.w > new_rect.x + new_rect.w) {
+		Rect temp = free_rect;
+		temp.x = new_rect.x + new_rect.w;
+		temp.w = free_rect.x + free_rect.w - (new_rect.x + new_rect.w);
+		split_rects.push_back(temp);
+	}
+
+	return split_rects;
 }
