@@ -161,7 +161,7 @@ bool AtlasPacker::PackAtlasMaxRects(ImageData& images, Vec2 size)
 	//sort indices of sizes as if they were sorted by height, but without actually sorting the underlying structure
 	std::vector<int> sorted_indices(images.num_images_);
 	std::iota(sorted_indices.begin(), sorted_indices.end(), 0);
-	std::sort(sorted_indices.begin(), sorted_indices.end(), [&images](int i, int j) { return images.rects_[i].w * images.rects_[i].h > images.rects_[j].w * images.rects_[j].h; });
+	std::sort(sorted_indices.begin(), sorted_indices.end(), [&images](int i, int j) { return images.rects_[i].h > images.rects_[j].h; });
 
 	//start with whole atlas being available
 	std::vector<Rect> free_rects_;
@@ -184,6 +184,7 @@ bool AtlasPacker::PackAtlasMaxRects(ImageData& images, Vec2 size)
 
 				new_rect.x = free_rects_[i].x;
 				new_rect.y = free_rects_[i].y;
+				break;
 			}
 			
 			//if reached the end of list, can not fit in any available rects
@@ -193,12 +194,14 @@ bool AtlasPacker::PackAtlasMaxRects(ImageData& images, Vec2 size)
 		}
 
 		//split intersected free rects into at most 4 new smaller rects
-		for (int j = 0; j < free_rects_.size(); ++j) {
+		int num_rects_left = free_rects_.size();
+		for (int j = 0; j < num_rects_left; ++j) {
 			if (IntersectsRect(new_rect, free_rects_[j])){
 				auto split_rects = GetNewSplitRects(new_rect, free_rects_[j]);
 				free_rects_.insert(free_rects_.end(), split_rects.begin(), split_rects.end());
 				free_rects_.erase(free_rects_.begin() + j);
 				--j;
+				--num_rects_left;
 			}
 		}
 
@@ -227,7 +230,7 @@ bool AtlasPacker::PackAtlasMaxRects(ImageData& images, Vec2 size)
 			}
 		}
 
-		std::sort(free_rects_.begin(), free_rects_.end(), [&images](Rect a, Rect b) { return a.w * a.h < b.w* b.h; });
+		std::sort(free_rects_.begin(), free_rects_.end(), [&images](Rect a, Rect b) { return  a.w * a.h < b.w* b.h;  });
 	}
 
 	for (const auto& rect : free_rects_) {
