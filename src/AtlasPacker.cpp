@@ -56,7 +56,7 @@ int AtlasPacker::CreateAtlas(ImageData& image_data)
 			if (!PackAtlas(image_data, best_fit)) {
 				++best_fit.x;
 				if (best_fit.x > 4096) {
-					return -1;
+					continue;
 				}
 				possible_sizes_.push_back(best_fit);
 				std::push_heap(possible_sizes_.begin(), possible_sizes_.end(), [](Vec2 a, Vec2 b) { return a.x * a.y > b.x * b.y; });
@@ -293,11 +293,14 @@ void AtlasPacker::GetPossibleContainers(const ImageData& images, std::vector<Vec
 	max_height = std::min(max_height, 4096);
 
 	for (int h = min_height; h < max_height; ++h) {
+		//min_width *3 so that you wont have 1 long texture i.e 16x4096 if all tiles are 16 px wide
 		int w = min_width;
 		while (w * h < stats_.total_images_area) {
 			++w;
 		}
-		possible_sizes.push_back({ w, h });
+		if (w <= 4096) {
+			possible_sizes.push_back({ w, h });
+		}
 	}
 	
 	//sort by smallest area
