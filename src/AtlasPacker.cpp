@@ -37,37 +37,41 @@ int AtlasPacker::CreateAtlas(ImageData& image_data)
 {
 	std::chrono::steady_clock::time_point start_time = std::chrono::high_resolution_clock::now();
 
-	if (fixed_size_) {
-		size_ = { max_width_, max_height_ };
-	}
-	else if (size_solver_ == AtlasSizeSolver::Fast) {
-		size_ = EstimateAtlasSize(image_data);
-	}
+	stats_.total_images_area = 0;
 
 	if (size_solver_ == AtlasSizeSolver::BestFit) {
+
+		//get heap of Vec2 sizes with x = min image width and y = 0 to 4096
 		GetPossibleContainers(image_data, possible_sizes_);
 
-		bool success = false;
-		while (!success) {
-			std::pop_heap(possible_sizes_.begin(), possible_sizes_.end(), [](Vec2 a, Vec2 b) { return a.x * a.y > b.x * b.y; });
-			Vec2 best_fit = possible_sizes_.back();
-			possible_sizes_.pop_back();
+		//sort heap by min area, try top of heap. If it does not work, increase the width and push back into heap. repeat until successful 
+		while (!PackAtlas(image_data, size_)) {
 
-			if (!PackAtlas(image_data, best_fit)) {
-				++best_fit.x;
-				if (best_fit.x > 4096) {
-					continue;
-				}
-				possible_sizes_.push_back(best_fit);
+			++size_.x;
+			//do not put back into heap if it will be larger than the maximum width of 4096
+			if (!(size_.x > max_width_)) {
+				possible_sizes_.push_back(size_);
 				std::push_heap(possible_sizes_.begin(), possible_sizes_.end(), [](Vec2 a, Vec2 b) { return a.x * a.y > b.x * b.y; });
 			}
-			else {
-				success = true;
-				size_ = best_fit;
+
+			if (possible_sizes_.empty()) {
+				return -1;
 			}
+
+			std::pop_heap(possible_sizes_.begin(), possible_sizes_.end(), [](Vec2 a, Vec2 b) { return a.x * a.y > b.x * b.y; });
+			size_ = possible_sizes_.back();
+			possible_sizes_.pop_back();
+
 		}
 	}
-	else {
+	else { 
+		if (fixed_size_) {
+			size_ = { max_width_, max_height_ };
+		}
+		else if (size_solver_ == AtlasSizeSolver::Fast) {
+			size_ = EstimateAtlasSize(image_data);
+		}
+
 		while (!PackAtlas(image_data, size_)) {
 
 			if (fixed_size_) {
@@ -173,17 +177,16 @@ bool AtlasPacker::PackAtlasMaxRects(ImageData& images, Vec2 size)
 			return false; 
 		}
 
+		//pop first image
 		int curr_idx = sorted_indices[0];
 		sorted_indices.erase(sorted_indices.begin());
-
-		Rect& new_rect = images.rects_[curr_idx];
 
 		for (int i = 0; i < free_rects_.size(); ++i) {
 			//if image can fit into available rect
 			if (images.rects_[curr_idx].w <= free_rects_[i].w && images.rects_[curr_idx].h <= free_rects_[i].h){
 
-				new_rect.x = free_rects_[i].x;
-				new_rect.y = free_rects_[i].y;
+				images.rects_[curr_idx].x = free_rects_[i].x;
+				images.rects_[curr_idx].y = free_rects_[i].y;
 				break;
 			}
 			
@@ -194,13 +197,15 @@ bool AtlasPacker::PackAtlasMaxRects(ImageData& images, Vec2 size)
 		}
 
 		//split intersected free rects into at most 4 new smaller rects
+
+		//used to not waste time going over the new split rects that are added
 		int num_rects_left = free_rects_.size();
-		for (int j = 0; j < num_rects_left; ++j) {
-			if (IntersectsRect(new_rect, free_rects_[j])){
-				auto split_rects = GetNewSplitRects(new_rect, free_rects_[j]);
+		for (int i = 0; i < num_rects_left; ++i) {
+			if (IntersectsRect(images.rects_[curr_idx], free_rects_[i])){
+				auto split_rects = GetNewSplitRects(images.rects_[curr_idx], free_rects_[i]);
 				free_rects_.insert(free_rects_.end(), split_rects.begin(), split_rects.end());
-				free_rects_.erase(free_rects_.begin() + j);
-				--j;
+				free_rects_.erase(free_rects_.begin() + i);
+				--i;
 				--num_rects_left;
 			}
 		}
@@ -209,53 +214,46 @@ bool AtlasPacker::PackAtlasMaxRects(ImageData& images, Vec2 size)
 		for (int j = 0; j < free_rects_.size(); ++j) {
 			for (int k = j + 1; k < free_rects_.size(); ++k) {
 				//if j is enclosed in k, remove j
-				if (free_rects_[j].x >= free_rects_[k].x && free_rects_[j].x + free_rects_[j].w <= free_rects_[k].x + free_rects_[k].w &&
-					free_rects_[j].y >= free_rects_[k].y && free_rects_[j].y + free_rects_[j].h <= free_rects_[k].y + free_rects_[k].h) {
-					free_rects_[j].x = -1;
+				if (EnclosedInRect(free_rects_[j], free_rects_[k])){
+					free_rects_.erase(free_rects_.begin() + j);
+					--j;
+					break;
 				}
-				else if (free_rects_[k].x >= free_rects_[j].x && free_rects_[k].x + free_rects_[k].w <= free_rects_[j].x + free_rects_[j].w &&
-					free_rects_[k].y >= free_rects_[j].y && free_rects_[k].y + free_rects_[k].h <= free_rects_[j].y + free_rects_[j].h) {
-					free_rects_[k].x = -1;
+				//vice versa
+				else if (EnclosedInRect(free_rects_[k], free_rects_[j])) {
+					free_rects_.erase(free_rects_.begin() + k);
+					--k;
 				}
-
+		
 			}
 		}
 
-		for (auto it = free_rects_.begin(); it != free_rects_.end();) {
-			if (it->x == -1) {
-				it = free_rects_.erase(it);
-			}
-			else {
-				++it;
-			}
-		}
-
-		std::sort(free_rects_.begin(), free_rects_.end(), [&images](Rect a, Rect b) { return  a.w * a.h < b.w* b.h;  });
+		std::sort(free_rects_.begin(), free_rects_.end(), [](Rect a, Rect b) { return  a.w * a.h < b.w* b.h;  });
 	}
 
-	for (const auto& rect : free_rects_) {
-
-		unsigned char* data = new unsigned char[(size_t)rect.w * rect.h * 4]();
-		for (int row = 0; row < rect.h; ++row) {
-			for (int col = 0; col < rect.w * 4; col += 4) {
-				if (row < 1 || col < 1) {
-					data[row * (rect.w * 4) + col] = 225;
-					data[row * (rect.w * 4) + col + 1] = 225;
-					data[row * (rect.w * 4) + col + 2] = 225;
-					data[row * (rect.w * 4) + col + 3] = 225;
-				}
-				else {
-					data[row * (rect.w * 4) + col] = 225;
-					data[row * (rect.w * 4) + col + 1] = 0;
-					data[row * (rect.w * 4) + col + 2] = 0;
-					data[row * (rect.w * 4) + col + 3] = 225;
-				}
-			}
-		}
-		images.rects_[images.num_images_] = rect;
-		images.data_[images.num_images_] = data;
-		++images.num_images_;
-	}
+	//for (const auto& rect : free_rects_) {
+	//
+	//	unsigned char* data = new unsigned char[(size_t)rect.w * rect.h * 4]();
+	//	for (int row = 0; row < rect.h; ++row) {
+	//		for (int col = 0; col < rect.w * 4; col += 4) {
+	//			if (row < 1 || col < 1) {
+	//				data[row * (rect.w * 4) + col] = 225;
+	//				data[row * (rect.w * 4) + col + 1] = 225;
+	//				data[row * (rect.w * 4) + col + 2] = 225;
+	//				data[row * (rect.w * 4) + col + 3] = 225;
+	//			}
+	//			else {
+	//				data[row * (rect.w * 4) + col] = 225;
+	//				data[row * (rect.w * 4) + col + 1] = 0;
+	//				data[row * (rect.w * 4) + col + 2] = 0;
+	//				data[row * (rect.w * 4) + col + 3] = 225;
+	//			}
+	//		}
+	//	}
+	//	images.rects_[images.num_images_] = rect;
+	//	images.data_[images.num_images_] = data;
+	//	++images.num_images_;
+	//}
 
 	return true;
 }
@@ -276,21 +274,19 @@ void AtlasPacker::GetPossibleContainers(const ImageData& images, std::vector<Vec
 	int min_width = 0;
 	int min_height = 0;
 	int max_height = 0;
-	stats_.total_images_area = 0;
 	for (int i = 0; i < images.num_images_; ++i) {
 		if (images.rects_[i].w > min_width) {
 			min_width = images.rects_[i].w;
 		}
 
-		stats_.total_images_area += images.rects_[i].w * images.rects_[i].h;
-
 		max_height += images.rects_[i].h;
 		if (images.rects_[i].h > min_height) {
 			min_height = images.rects_[i].h;
 		}
+		stats_.total_images_area += images.rects_[i].w * images.rects_[i].h;
 	}
 
-	max_height = std::min(max_height, 4096);
+	max_height = std::min(max_height, max_height_);
 
 	for (int h = min_height; h < max_height; ++h) {
 		//min_width *3 so that you wont have 1 long texture i.e 16x4096 if all tiles are 16 px wide
@@ -298,22 +294,29 @@ void AtlasPacker::GetPossibleContainers(const ImageData& images, std::vector<Vec
 		while (w * h < stats_.total_images_area) {
 			++w;
 		}
-		if (w <= 4096) {
+		if (w <= max_width_) {
 			possible_sizes.push_back({ w, h });
 		}
 	}
 	
-	//sort by smallest area
+	//sort by smallest area and pop smallest fit into size_
+
+	if (possible_sizes.empty()) {
+		return;
+	}
+
 	std::make_heap(possible_sizes.begin(), possible_sizes.end(), [](Vec2 a, Vec2 b) { return a.x * a.y > b.x * b.y; });
+	std::pop_heap(possible_sizes.begin(), possible_sizes.end(), [](Vec2 a, Vec2 b) { return a.x * a.y > b.x * b.y; });
+	size_ = possible_sizes.back();
+	possible_sizes.pop_back();
 }
 
 Vec2 AtlasPacker::EstimateAtlasSize(const ImageData& images)
 {
-	stats_.total_images_area = 0;
-
 	for (int i = 0; i < images.num_images_; ++i){
 		stats_.total_images_area += images.rects_[i].w * images.rects_[i].h;
 	}
+
 	Vec2 size{ 16, 16 };
 	while (size.x * size.y < stats_.total_images_area) {
 		if (pow_of_2_) {
@@ -363,4 +366,10 @@ std::vector<Rect> AtlasPacker::GetNewSplitRects(Rect& new_rect, Rect& free_rect)
 	}
 
 	return split_rects;
+}
+
+bool AtlasPacker::EnclosedInRect(Rect& a, Rect& b)
+{
+	return (a.x >= b.x && a.x + a.w <= b.x + b.w &&
+			a.y >= b.y && a.y + a.h <= b.y + b.h);
 }

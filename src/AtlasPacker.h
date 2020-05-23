@@ -40,7 +40,7 @@ public:
 	Vec2 EstimateAtlasSize(const ImageData& images);
 	std::vector<Rect> GetNewSplitRects(Rect& new_rect, Rect& free_rect);
 
-
+	bool EnclosedInRect(Rect& a, Rect& b);
 	
 	int max_width_ = 4096;
 	int max_height_ = 4096;
