@@ -35,13 +35,13 @@ public:
 	bool PackAtlas(ImageData& images, Vec2 size);
 	bool PackAtlasShelf(ImageData& images, Vec2 size);
 	bool PackAtlasMaxRects(ImageData& images, Vec2 size);
-	bool IntersectsRect(Rect& new_rect, Rect& free_rect);
+	bool IntersectsRect(const Rect& new_rect, const Rect& free_rect);
 
 	void GetPossibleContainers(const ImageData& images, std::vector<Vec2>& possible_sizes);
 	Vec2 EstimateAtlasSize(const ImageData& images);
-	std::vector<Rect> GetNewSplitRects(Rect& new_rect, Rect& free_rect);
+	void PushSplitRects(std::vector<Rect>& rects, const Rect& new_rect, Rect free_rect);
 
-	bool EnclosedInRect(Rect& a, Rect& b);
+	bool EnclosedInRect(const Rect& a, const Rect& b);
 	
 	int max_width_ = 4096;
 	int max_height_ = 4096;
