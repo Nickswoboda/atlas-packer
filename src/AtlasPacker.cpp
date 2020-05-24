@@ -373,30 +373,30 @@ std::vector<Rect> AtlasPacker::GetNewSplitRects(Rect& new_rect, Rect& free_rect)
 	//top rect
 	if (new_rect.y > free_rect.y){
 		Rect temp = free_rect;
-		temp.h = new_rect.y - free_rect.y;
+		temp.h = new_rect.y - free_rect.y - pixel_padding_;
 		split_rects.push_back(temp);
 	}
 
 	//bottom rect
 	if (free_rect.y + free_rect.h > new_rect.y + new_rect.h) {
 		Rect temp = free_rect;
-		temp.y = new_rect.y + new_rect.h;
-		temp.h = free_rect.y + free_rect.h - (new_rect.y + new_rect.h);
+		temp.y = new_rect.y + new_rect.h + pixel_padding_;
+		temp.h = free_rect.y + free_rect.h - (new_rect.y + new_rect.h) - pixel_padding_;
 		split_rects.push_back(temp);
 	}
 
 	//left rect
 	if (new_rect.x > free_rect.x) {
 		Rect temp = free_rect;
-		temp.w = new_rect.x - free_rect.x;
+		temp.w = new_rect.x - free_rect.x - pixel_padding_;
 		split_rects.push_back(temp);
 	}
 
 	//right rect
 	if (free_rect.x + free_rect.w > new_rect.x + new_rect.w) {
 		Rect temp = free_rect;
-		temp.x = new_rect.x + new_rect.w;
-		temp.w = free_rect.x + free_rect.w - (new_rect.x + new_rect.w);
+		temp.x = new_rect.x + new_rect.w + pixel_padding_;
+		temp.w = free_rect.x + free_rect.w - (new_rect.x + new_rect.w) - pixel_padding_;
 		split_rects.push_back(temp);
 	}
 
