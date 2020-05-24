@@ -123,7 +123,7 @@ std::string Application::TestFolder(const std::string& folder)
 	atlas_packer_.algo_ = Algorithm::MaxRects;
 
 	result += "Size: Fast \n";
-	atlas_packer_.size_solver_ = AtlasSizeSolver::Fast;
+	atlas_packer_.size_solver_ = SizeSolver::Fast;
 
 	double avg_time = 0.0;
 
@@ -138,7 +138,7 @@ std::string Application::TestFolder(const std::string& folder)
 	result += std::to_string(avg_time) + " ms\n";
 
 	result += "Size: Best Fit \n";
-	atlas_packer_.size_solver_ = AtlasSizeSolver::BestFit;
+	atlas_packer_.size_solver_ = SizeSolver::BestFit;
 
 	avg_time = 0.0;
 
@@ -227,9 +227,7 @@ void Application::RenderInputState()
 	if (ImGui::InputInt("##MaxHeight", &atlas_packer_.max_height_)) {
 		atlas_packer_.max_height_ = std::clamp(atlas_packer_.max_height_, 0, 4096);
 	}
-	ImGui::Text("Fixed Size: ");
-	ImGui::SameLine();
-	ImGui::Checkbox("##FixedSize", &atlas_packer_.fixed_size_);
+
 	ImGui::Text("Force Square: ");
 	ImGui::SameLine();
 	ImGui::Checkbox("##ForceSquare", &atlas_packer_.force_square_);
@@ -260,14 +258,36 @@ void Application::RenderInputState()
 
 	ImGui::Text("Atlas Size Solver: ");
 	ImGui::SameLine();
-	if (ImGui::BeginCombo("##BoxSolver", atlas_packer_.size_solver_ == AtlasSizeSolver::Fast ? "Fast" : "Best Fit")) {
+	static std::string combo_text = "Fast";
+	if (ImGui::BeginCombo("##BoxSolver", combo_text.c_str())) {
 		if (ImGui::Selectable("Fast")) {
-			atlas_packer_.size_solver_ = AtlasSizeSolver::Fast;
+			atlas_packer_.size_solver_ = SizeSolver::Fast;
+			combo_text = "Fast";
 		}
 		else if (ImGui::Selectable("Best Fit")) {
-			atlas_packer_.size_solver_ = AtlasSizeSolver::BestFit;
+			atlas_packer_.size_solver_ = SizeSolver::BestFit;
+			combo_text = "Best Fit";
+		}
+		else if (ImGui::Selectable("Fixed")) {
+			atlas_packer_.size_solver_ = SizeSolver::Fixed;
+			combo_text = "Fixed";
 		}
 		ImGui::EndCombo();
+	}
+
+	if (atlas_packer_.size_solver_ == SizeSolver::Fixed) {
+		ImGui::Text("Fixed Width: ");
+		ImGui::SameLine();
+		if (ImGui::InputInt("##FixedWidth", &atlas_packer_.fixed_width_)) {
+			atlas_packer_.fixed_width_ = std::clamp(atlas_packer_.fixed_width_, 0, 4096);
+		}
+
+
+		ImGui::Text("Fixed Height: ");
+		ImGui::SameLine();
+		if (ImGui::InputInt("##FixedHeight", &atlas_packer_.fixed_height_)) {
+			atlas_packer_.fixed_height_ = std::clamp(atlas_packer_.fixed_height_, 0, 4096);
+		}
 	}
 
 	if (input_items_.empty()) {

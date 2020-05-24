@@ -39,7 +39,7 @@ int AtlasPacker::CreateAtlas(ImageData& image_data)
 
 	stats_.total_images_area = 0;
 
-	if (size_solver_ == AtlasSizeSolver::BestFit) {
+	if (size_solver_ == SizeSolver::BestFit) {
 
 		//get heap of Vec2 sizes with x = min image width and y = 0 to 4096
 		GetPossibleContainers(image_data, possible_sizes_);
@@ -65,16 +65,17 @@ int AtlasPacker::CreateAtlas(ImageData& image_data)
 		}
 	}
 	else { 
-		if (fixed_size_) {
+		if (size_solver_ == SizeSolver::Fixed) {
 			size_ = { max_width_, max_height_ };
 		}
-		else if (size_solver_ == AtlasSizeSolver::Fast) {
+		//if not fixed, then fast
+		else {
 			size_ = EstimateAtlasSize(image_data);
 		}
 
 		while (!PackAtlas(image_data, size_)) {
 
-			if (fixed_size_) {
+			if (size_solver_ == SizeSolver::Fixed) {
 				return -1;
 			}
 			else{

@@ -20,8 +20,9 @@ enum class Algorithm
 	MaxRects
 };
 
-enum class AtlasSizeSolver
+enum class SizeSolver
 {
+	Fixed,
 	Fast,
 	BestFit
 };
@@ -44,14 +45,15 @@ public:
 	
 	int max_width_ = 4096;
 	int max_height_ = 4096;
-	bool fixed_size_ = false;
+	int fixed_width_ = 0;
+	int fixed_height_ = 0;
 	bool force_square_ = false;
 
 	int pixel_padding_ = 0;
 	bool pow_of_2_ = false;
 	
 	Algorithm algo_ = Algorithm::Shelf;
-	AtlasSizeSolver size_solver_ = AtlasSizeSolver::Fast;
+	SizeSolver size_solver_ = SizeSolver::Fast;
 	std::vector<Vec2> possible_sizes_;
 	Vec2 size_;
 	std::string metadata_;
