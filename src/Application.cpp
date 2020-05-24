@@ -213,37 +213,9 @@ void Application::RenderInputState()
 		input_items_.clear();
 	}
 
-
 	ImGui::Separator();
-	ImGui::Text("Max Width: ");
-	ImGui::SameLine();
-	if (ImGui::InputInt("##MaxWidth", &atlas_packer_.max_width_)) {
-		atlas_packer_.max_width_ = std::clamp(atlas_packer_.max_width_, 0, 4096);
-	}
-
-
-	ImGui::Text("Max Height: ");
-	ImGui::SameLine();
-	if (ImGui::InputInt("##MaxHeight", &atlas_packer_.max_height_)) {
-		atlas_packer_.max_height_ = std::clamp(atlas_packer_.max_height_, 0, 4096);
-	}
-
-	ImGui::Text("Force Square: ");
-	ImGui::SameLine();
-	ImGui::Checkbox("##ForceSquare", &atlas_packer_.force_square_);
-
 	ImGui::Separator();
-	ImGui::Text("Power of 2: ");
-	ImGui::SameLine();
-	ImGui::Checkbox("##Powof2", &atlas_packer_.pow_of_2_);
 
-	ImGui::Text("Pixel Padding: ");
-	ImGui::SameLine();
-	if (ImGui::InputInt("##Padding", &atlas_packer_.pixel_padding_)) {
-		atlas_packer_.pixel_padding_ = std::clamp(atlas_packer_.pixel_padding_, 0, 32);
-	}
-
-	ImGui::Separator();
 	ImGui::Text("Algorith: ");
 	ImGui::SameLine();
 	if (ImGui::BeginCombo("##Algorithm", atlas_packer_.algo_ == Algorithm::Shelf ? "Shelf" : "MaxRects")) {
@@ -256,7 +228,7 @@ void Application::RenderInputState()
 		ImGui::EndCombo();
 	}
 
-	ImGui::Text("Atlas Size Solver: ");
+	ImGui::Text("Size Solver: ");
 	ImGui::SameLine();
 	static std::string combo_text = "Fast";
 	if (ImGui::BeginCombo("##BoxSolver", combo_text.c_str())) {
@@ -282,12 +254,42 @@ void Application::RenderInputState()
 			atlas_packer_.fixed_width_ = std::clamp(atlas_packer_.fixed_width_, 0, 4096);
 		}
 
-
 		ImGui::Text("Fixed Height: ");
 		ImGui::SameLine();
 		if (ImGui::InputInt("##FixedHeight", &atlas_packer_.fixed_height_)) {
 			atlas_packer_.fixed_height_ = std::clamp(atlas_packer_.fixed_height_, 0, 4096);
 		}
+	}
+	else {
+		ImGui::Text("Max Width: ");
+		ImGui::SameLine();
+		if (ImGui::InputInt("##MaxWidth", &atlas_packer_.max_width_)) {
+			atlas_packer_.max_width_ = std::clamp(atlas_packer_.max_width_, 0, 4096);
+		}
+
+
+		ImGui::Text("Max Height: ");
+		ImGui::SameLine();
+		if (ImGui::InputInt("##MaxHeight", &atlas_packer_.max_height_)) {
+			atlas_packer_.max_height_ = std::clamp(atlas_packer_.max_height_, 0, 4096);
+		}
+	}
+
+	if (!(atlas_packer_.size_solver_ == SizeSolver::Fixed)) {
+		ImGui::Text("Force Square: ");
+		ImGui::SameLine();
+		ImGui::Checkbox("##ForceSquare", &atlas_packer_.force_square_);
+
+		ImGui::Separator();
+		ImGui::Text("Power of 2: ");
+		ImGui::SameLine();
+		ImGui::Checkbox("##Powof2", &atlas_packer_.pow_of_2_);
+	}
+
+	ImGui::Text("Pixel Padding: ");
+	ImGui::SameLine();
+	if (ImGui::InputInt("##Padding", &atlas_packer_.pixel_padding_)) {
+		atlas_packer_.pixel_padding_ = std::clamp(atlas_packer_.pixel_padding_, 0, 32);
 	}
 
 	if (input_items_.empty()) {

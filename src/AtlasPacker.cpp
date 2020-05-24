@@ -47,26 +47,36 @@ int AtlasPacker::CreateAtlas(ImageData& image_data)
 		//sort heap by min area, try top of heap. If it does not work, increase the width and push back into heap. repeat until successful 
 		while (!PackAtlas(image_data, size_)) {
 
-			++size_.x;
-			//do not put back into heap if it will be larger than the maximum width of 4096
-			if (!(size_.x > max_width_)) {
-				possible_sizes_.push_back(size_);
-				std::push_heap(possible_sizes_.begin(), possible_sizes_.end(), [](Vec2 a, Vec2 b) { return a.x * a.y > b.x * b.y; });
+			if (force_square_ || pow_of_2_) {
+				if (possible_sizes_.empty()) {
+					return -1;
+				}
+				std::pop_heap(possible_sizes_.begin(), possible_sizes_.end(), [](Vec2 a, Vec2 b) { return a.x * a.y > b.x * b.y; });
+				size_ = possible_sizes_.back();
+				possible_sizes_.pop_back();
 			}
+			else {
+				++size_.x;
+				//do not put back into heap if it will be larger than the maximum width of 4096
+				if (!(size_.x > max_width_)) {
+					possible_sizes_.push_back(size_);
+					std::push_heap(possible_sizes_.begin(), possible_sizes_.end(), [](Vec2 a, Vec2 b) { return a.x * a.y > b.x * b.y; });
+				}
 
-			if (possible_sizes_.empty()) {
-				return -1;
+				if (possible_sizes_.empty()) {
+					return -1;
+				}
+
+				std::pop_heap(possible_sizes_.begin(), possible_sizes_.end(), [](Vec2 a, Vec2 b) { return a.x * a.y > b.x * b.y; });
+				size_ = possible_sizes_.back();
+				possible_sizes_.pop_back();
 			}
-
-			std::pop_heap(possible_sizes_.begin(), possible_sizes_.end(), [](Vec2 a, Vec2 b) { return a.x * a.y > b.x * b.y; });
-			size_ = possible_sizes_.back();
-			possible_sizes_.pop_back();
 
 		}
 	}
 	else { 
 		if (size_solver_ == SizeSolver::Fixed) {
-			size_ = { max_width_, max_height_ };
+			size_ = { fixed_width_, fixed_height_ };
 		}
 		//if not fixed, then fast
 		else {
@@ -80,7 +90,7 @@ int AtlasPacker::CreateAtlas(ImageData& image_data)
 			}
 			else{
 				//every iteration increase either by 64px or double size if pow_of_two is enabled
-				size_.x == size_.y ? (size_.x += pow_of_2_ ? size_.x : 64) : size_.y = size_.x;
+				size_.x == size_.y ? (size_.x += pow_of_2_ ? size_.x : 32) : size_.y = size_.x;
 				if (force_square_) {
 					size_.y = size_.x;
 				}
@@ -289,14 +299,38 @@ void AtlasPacker::GetPossibleContainers(const ImageData& images, std::vector<Vec
 
 	max_height = std::min(max_height, max_height_);
 
-	for (int h = min_height; h < max_height; ++h) {
-		//min_width *3 so that you wont have 1 long texture i.e 16x4096 if all tiles are 16 px wide
-		int w = min_width;
-		while (w * h < stats_.total_images_area) {
-			++w;
+	if (pow_of_2_) {
+		for (int w = 1; w < max_width_; w *= 2) {
+			if (force_square_ && w * w > stats_.total_images_area) {
+				possible_sizes.push_back({ w, w });
+			}
+			else {
+				for (int h = 1; h < max_height_; h *= 2) {
+					if (w * h > stats_.total_images_area) {
+						possible_sizes.push_back({ w, h });
+					}
+				}
+			}
 		}
-		if (w <= max_width_) {
-			possible_sizes.push_back({ w, h });
+	}
+	else {
+		for (int h = min_height; h < max_height; ++h) {
+
+			if (force_square_ && h * h > stats_.total_images_area) {
+				possible_sizes.push_back({ h, h });
+			}
+			else {
+				int w = min_width;
+				while (w * h < stats_.total_images_area) {
+					++w;
+				}
+				if (w <= max_width_) {
+					if (force_square_ && w != h) {
+						continue;
+					}
+					possible_sizes.push_back({ w, h });
+				}
+			}
 		}
 	}
 	
@@ -318,15 +352,15 @@ Vec2 AtlasPacker::EstimateAtlasSize(const ImageData& images)
 		stats_.total_images_area += images.rects_[i].w * images.rects_[i].h;
 	}
 
-	Vec2 size{ 16, 16 };
+	Vec2 size{ 64, 64 };
 	while (size.x * size.y < stats_.total_images_area) {
 		if (pow_of_2_) {
 			size.x *= 2;
 			size.y *= 2;
 		}
 		else {
-			size.x += 2;
-			size.y += 2;
+			size.x += 32;
+			size.y += 32;
 		}
 	}
 	return size;
