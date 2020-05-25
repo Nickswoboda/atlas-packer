@@ -16,7 +16,7 @@
 
 
 Application::Application(int width, int height)
-	:window_(width, height), input_file_dialog_(window_.width_ / 2, window_.height_ / 3), save_file_dialog_(window_.width_ / 2, window_.height_ / 3)
+	:window_(width, height), input_file_dialog_(window_.width_ / 2, 250), save_file_dialog_(window_.width_ / 2, 175)
 {
 	if (!gladLoadGLLoader(GLADloadproc(glfwGetProcAddress))) {
 		std::cout << "could not load GLAD";
@@ -87,6 +87,7 @@ void Application::Render()
 	}
 
 	if (state_stack_.top() != State::Settings) {
+		ImGui::SameLine(100);
 		if (ImGui::Button("Settings")) {
 			PushState(State::Settings);
 		}
@@ -100,9 +101,7 @@ void Application::Render()
 	}
 
 	//resize height based on amount of widgets on screen
-	if (window_.height_ < ImGui::GetCursorPosY()) {
-		window_.ResizeHeight(ImGui::GetCursorPosY());
-	}
+	window_.ResizeHeight(ImGui::GetCursorPosY());
 	
 	ImGui::End();
 
@@ -177,7 +176,7 @@ void Application::RenderInputState()
 
 	//input item frame
 	ImGui::SameLine();
-	ImGui::BeginChildFrame(2, { window_.width_ / 2.0f, window_.height_ / 3.0f });
+	ImGui::BeginChildFrame(2, { window_.width_ / 2.0f, 250.0f });
 	int index = 0;
 	static int selected_index = -1;
 	static std::string selected_input_item;
@@ -203,7 +202,7 @@ void Application::RenderInputState()
 		}
 	}
 
-	ImGui::SameLine(window_.width_ / 2.0f);
+	ImGui::SameLine((window_.width_ / 2.0f) + 10);
 	if (ImGui::Button("Remove")) {
 		input_items_.erase(selected_input_item);
 		selected_index = -1;
@@ -216,8 +215,9 @@ void Application::RenderInputState()
 	ImGui::Separator();
 	ImGui::Separator();
 
+	ImGui::PushItemWidth(200);
 	ImGui::Text("Algorith: ");
-	ImGui::SameLine();
+	ImGui::SameLine(100);
 	if (ImGui::BeginCombo("##Algorithm", atlas_packer_.algo_ == Algorithm::Shelf ? "Shelf" : "MaxRects")) {
 		if (ImGui::Selectable("Shelf")) {
 			atlas_packer_.algo_ = Algorithm::Shelf;
@@ -229,7 +229,7 @@ void Application::RenderInputState()
 	}
 
 	ImGui::Text("Size Solver: ");
-	ImGui::SameLine();
+	ImGui::SameLine(100);
 	static std::string combo_text = "Fast";
 	if (ImGui::BeginCombo("##BoxSolver", combo_text.c_str())) {
 		if (ImGui::Selectable("Fast")) {
@@ -247,57 +247,58 @@ void Application::RenderInputState()
 		ImGui::EndCombo();
 	}
 
+	ImGui::Text("Pixel Padding: ");
+	ImGui::SameLine(100);
+	if (ImGui::InputInt("##Padding", &atlas_packer_.pixel_padding_)) {
+		atlas_packer_.pixel_padding_ = std::clamp(atlas_packer_.pixel_padding_, 0, 32);
+	}
+
 	if (atlas_packer_.size_solver_ == SizeSolver::Fixed) {
 		ImGui::Text("Fixed Width: ");
-		ImGui::SameLine();
+		ImGui::SameLine(100);
 		if (ImGui::InputInt("##FixedWidth", &atlas_packer_.fixed_width_)) {
-			atlas_packer_.fixed_width_ = std::clamp(atlas_packer_.fixed_width_, 0, 4096);
+			atlas_packer_.fixed_width_ = std::clamp(atlas_packer_.fixed_width_, 0, MAX_DIMENSIONS);
 		}
 
 		ImGui::Text("Fixed Height: ");
-		ImGui::SameLine();
+		ImGui::SameLine(100);
 		if (ImGui::InputInt("##FixedHeight", &atlas_packer_.fixed_height_)) {
-			atlas_packer_.fixed_height_ = std::clamp(atlas_packer_.fixed_height_, 0, 4096);
+			atlas_packer_.fixed_height_ = std::clamp(atlas_packer_.fixed_height_, 0, MAX_DIMENSIONS);
 		}
 	}
 	else {
 		ImGui::Text("Max Width: ");
-		ImGui::SameLine();
+		ImGui::SameLine(100);
 		if (ImGui::InputInt("##MaxWidth", &atlas_packer_.max_width_)) {
-			atlas_packer_.max_width_ = std::clamp(atlas_packer_.max_width_, 0, 4096);
+			atlas_packer_.max_width_ = std::clamp(atlas_packer_.max_width_, 0, MAX_DIMENSIONS);
 		}
 
 
 		ImGui::Text("Max Height: ");
-		ImGui::SameLine();
+		ImGui::SameLine(100);
 		if (ImGui::InputInt("##MaxHeight", &atlas_packer_.max_height_)) {
-			atlas_packer_.max_height_ = std::clamp(atlas_packer_.max_height_, 0, 4096);
+			atlas_packer_.max_height_ = std::clamp(atlas_packer_.max_height_, 0, MAX_DIMENSIONS);
 		}
 	}
 
 	if (!(atlas_packer_.size_solver_ == SizeSolver::Fixed)) {
 		ImGui::Text("Force Square: ");
-		ImGui::SameLine();
+		ImGui::SameLine(100);
 		ImGui::Checkbox("##ForceSquare", &atlas_packer_.force_square_);
 
-		ImGui::Separator();
 		ImGui::Text("Power of 2: ");
-		ImGui::SameLine();
+		ImGui::SameLine(100);
 		ImGui::Checkbox("##Powof2", &atlas_packer_.pow_of_2_);
 	}
 
-	ImGui::Text("Pixel Padding: ");
-	ImGui::SameLine();
-	if (ImGui::InputInt("##Padding", &atlas_packer_.pixel_padding_)) {
-		atlas_packer_.pixel_padding_ = std::clamp(atlas_packer_.pixel_padding_, 0, 32);
-	}
-
+	ImGui::Separator();
 	if (input_items_.empty()) {
 		ImGuiErrorText("You must add an item to submit");
 	}
 	if (max_images_exceeded_) {
 		ImGuiErrorText("The max number of images per atlas has been exceeded");
 	}
+
 	if (ImGui::Button("Submit") && !input_items_.empty()) {
 		UnpackInputFolders();
 		max_images_exceeded_ = unpacked_items_.size() > MAX_IMAGES;
@@ -348,6 +349,8 @@ void Application::RenderOutputState()
 		ImGui::Text("Time to pack: %.2f ms", atlas_packer_.stats_.time_elapsed_in_ms);
 	}
 
+	ImGui::PushItemWidth(200);
+
 	ImGui::Separator();
 	ImGui::Text("Save Folder Path: %s", save_folder_path_.c_str());
 	ImGui::SameLine();
@@ -371,7 +374,7 @@ void Application::RenderOutputState()
 		}
 	}
 
-	ImGui::Text("Save File Format:"); ImGui::SameLine();
+	ImGui::Text("Save File Format:"); ImGui::SameLine(120);
 	if (ImGui::BeginCombo("##SaveFormat", save_file_format_ == SaveFileFormat::PNG ? ".png" : ".jpg")) {
 		if (ImGui::Selectable(".png")) {
 			save_file_format_ = SaveFileFormat::PNG;
@@ -387,13 +390,13 @@ void Application::RenderOutputState()
 		ImGui::SliderInt("##jpgquality", &jpg_quality_, 1, 100);
 	}
 
-	ImGui::Separator();
 	if (save_folder_path_.empty()) {
 		ImGuiErrorText("You must choose a save destination folder");
 	}
 	if (ImGui::Button("Save") && !save_folder_path_.empty()) {
 		Save(save_folder_path_);
 	}
+	ImGui::Separator();
 
 	if (ImGui::Button("Try Again")) {
 		unpacked_items_.clear();

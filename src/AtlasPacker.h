@@ -4,6 +4,7 @@
 
 #include <unordered_map>
 
+constexpr int MAX_DIMENSIONS = 4096;
 struct Stats
 {
 	double time_elapsed_in_ms = 0.0;
@@ -32,6 +33,7 @@ public:
 	int CreateAtlas(ImageData& image_data);
 	std::string GetAtlasMetadata(const ImageData& images);
 
+	void WriteAtlasImageData(ImageData& images, int width, int height);
 	bool PackAtlas(ImageData& images, Vec2 size);
 	bool PackAtlasShelf(ImageData& images, Vec2 size);
 	bool PackAtlasMaxRects(ImageData& images, Vec2 size);
@@ -43,10 +45,10 @@ public:
 
 	bool EnclosedInRect(const Rect& a, const Rect& b);
 	
-	int max_width_ = 4096;
-	int max_height_ = 4096;
-	int fixed_width_ = 0;
-	int fixed_height_ = 0;
+	int max_width_ = MAX_DIMENSIONS;
+	int max_height_ = MAX_DIMENSIONS;
+	int fixed_width_ = MAX_DIMENSIONS;
+	int fixed_height_ = MAX_DIMENSIONS;
 	bool force_square_ = false;
 
 	int pixel_padding_ = 0;

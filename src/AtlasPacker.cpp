@@ -5,7 +5,7 @@
 #include <chrono>
 #include <numeric>
 
-void CreateAtlasImageData(ImageData& images, int width, int height)
+void AtlasPacker::WriteAtlasImageData(ImageData& images, int width, int height)
 {
 	int channels = 4;
 	int atlas_pitch = width * channels;
@@ -113,7 +113,7 @@ int AtlasPacker::CreateAtlas(ImageData& image_data)
 	//contains x, y, w, h of all individual textures in atlas
 	metadata_ = GetAtlasMetadata(image_data);
 
-	CreateAtlasImageData(image_data, size_.x, size_.y);
+	WriteAtlasImageData(image_data, size_.x, size_.y);
 
 	possible_sizes_.clear();
 
