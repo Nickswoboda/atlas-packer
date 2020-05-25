@@ -295,8 +295,16 @@ void Application::RenderInputState()
 	if (input_items_.empty()) {
 		ImGuiErrorText("You must add an item to submit");
 	}
+	if (max_images_exceeded_) {
+		ImGuiErrorText("The max number of images per atlas has been exceeded");
+	}
 	if (ImGui::Button("Submit") && !input_items_.empty()) {
 		UnpackInputFolders();
+		max_images_exceeded_ = unpacked_items_.size() > MAX_IMAGES;
+		if (max_images_exceeded_) {
+			unpacked_items_.clear();
+			return;
+		}
 		if (!unpacked_items_.empty()) {
 			GetImageData(unpacked_items_, image_data_);
 			//returns index of image_data_ that the atlas image data resides. equivalent to image_data_.num_images

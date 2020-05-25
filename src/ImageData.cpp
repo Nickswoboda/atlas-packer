@@ -23,4 +23,5 @@ void GetImageData(const std::vector<std::string>& paths, ImageData& image_data)
 
 		++image_data.num_images_;
 	}
+
 }

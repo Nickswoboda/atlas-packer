@@ -61,6 +61,7 @@ private:
 
 	std::string save_folder_path_;
 	bool changing_save_folder_ = false;
+	bool max_images_exceeded_ = false;
 
 	SaveFileFormat save_file_format_ = SaveFileFormat::PNG;
 

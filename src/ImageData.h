@@ -19,6 +19,7 @@ struct Rect
 };
 
 constexpr int MAX_IMAGES = 512;
+
 struct ImageData
 {
 	Rect rects_[MAX_IMAGES];
