@@ -42,6 +42,11 @@ Application::Application(int width, int height)
 
 Application::~Application()
 {
+	for (int i = 0; i < MAX_IMAGES; ++i) {
+		if (image_data_.data_[i] != nullptr) {
+			delete[] image_data_.data_[i];
+		}
+	}
 	glfwTerminate();
 }
 

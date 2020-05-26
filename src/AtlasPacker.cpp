@@ -195,20 +195,34 @@ bool AtlasPacker::PackAtlasMaxRects(ImageData& images, Vec2 size)
 		int curr_idx = sorted_indices[0];
 		sorted_indices.erase(sorted_indices.begin());
 
+		int best_short_side_fit = MAX_DIMENSIONS;
+		Vec2 bssf_pos;
 		for (int i = 0; i < free_rects.size(); ++i) {
+
+			//find best short side fit
 			//if image can fit into available rect
 			if (images.rects_[curr_idx].w <= free_rects[i].w && images.rects_[curr_idx].h <= free_rects[i].h){
 
-				images.rects_[curr_idx].x = free_rects[i].x;
-				images.rects_[curr_idx].y = free_rects[i].y;
-				break;
-			}
-			
-			//if reached the end of list, can not fit in any available rects
-			else if (i == (free_rects.size() - 1)) {
-				return false;
+				int leftover_width = free_rects[i].w - images.rects_[curr_idx].w;
+				int leftover_height = free_rects[i].h - images.rects_[curr_idx].h;
+				int shortest_side = std::min(leftover_width, leftover_height);
+
+				if (shortest_side < best_short_side_fit) {
+					best_short_side_fit = shortest_side;
+					bssf_pos.x = free_rects[i].x;
+					bssf_pos.y = free_rects[i].y;
+				}
 			}
 		}
+
+		//didnt find any fits
+		if (best_short_side_fit == MAX_DIMENSIONS) {
+			return false;
+		}
+
+		images.rects_[curr_idx].x = bssf_pos.x;
+		images.rects_[curr_idx].y = bssf_pos.y;
+
 
 		//split intersected free rects into at most 4 new smaller rects
 
@@ -241,8 +255,6 @@ bool AtlasPacker::PackAtlasMaxRects(ImageData& images, Vec2 size)
 		
 			}
 		}
-
-		std::sort(free_rects.begin(), free_rects.end(), [](Rect a, Rect b) { return  a.w * a.h < b.w* b.h;  });
 	}
 
 	//for (const auto& rect : free_rects_) {
