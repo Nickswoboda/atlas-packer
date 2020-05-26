@@ -4,9 +4,11 @@ set (CMAKE_CXX_STANDARD 17)
 
 project ("Atlas")
 
+IF(WIN32)
 IF(CMAKE_BUILD_TYPE MATCHES Release)
 set(CMAKE_CREATE_WIN32_EXE "/SUBSYSTEM:WINDOWS /ENTRY:\"mainCRTStartup\"")
 ENDIF(CMAKE_BUILD_TYPE MATCHES Release)
+ENDIF(WIN32)
 
 set (src 	"src/main.cpp"
 	"src/Application.cpp"
@@ -21,6 +23,7 @@ set (src 	"src/main.cpp"
 	"dependencies/imgui/imgui_widgets.cpp"
  "src/ImageData.cpp" "src/AtlasPacker.cpp")
 
+IF(WIN32)
 IF(CMAKE_BUILD_TYPE MATCHES Release)
 add_executable (Atlas WIN32
 	${src})
@@ -28,6 +31,7 @@ ELSE()
 add_executable (Atlas
 	${src})
 ENDIF(CMAKE_BUILD_TYPE MATCHES Release)
+ENDIF(WIN32)
 
 target_include_directories(Atlas
 PUBLIC
