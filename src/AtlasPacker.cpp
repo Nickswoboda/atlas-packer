@@ -90,9 +90,9 @@ int AtlasPacker::CreateAtlas(ImageData& image_data)
 			}
 			else{
 				//every iteration increase either by 64px or double size if pow_of_two is enabled
-				size_.x == size_.y ? (size_.x += pow_of_2_ ? size_.x : 32) : size_.y = size_.x;
+				size_.x == size_.y ? (size_.y += pow_of_2_ ? size_.y : 32) : size_.x = size_.y;
 				if (force_square_) {
-					size_.y = size_.x;
+					size_.x = size_.y;
 				}
 
 				if (size_.x > max_width_ || size_.y > max_height_) {

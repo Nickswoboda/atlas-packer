@@ -4,8 +4,11 @@ set (CMAKE_CXX_STANDARD 17)
 
 project ("Atlas")
 
-add_executable (Atlas
-	"src/main.cpp"
+IF(CMAKE_BUILD_TYPE MATCHES Release)
+set(CMAKE_CREATE_WIN32_EXE "/SUBSYSTEM:WINDOWS /ENTRY:\"mainCRTStartup\"")
+ENDIF(CMAKE_BUILD_TYPE MATCHES Release)
+
+set (src 	"src/main.cpp"
 	"src/Application.cpp"
 	"src/Window.cpp"
 	"src/FileDialog.cpp"
@@ -17,6 +20,14 @@ add_executable (Atlas
 	"dependencies/imgui/imgui_impl_opengl3.cpp"
 	"dependencies/imgui/imgui_widgets.cpp"
  "src/ImageData.cpp" "src/AtlasPacker.cpp")
+
+IF(CMAKE_BUILD_TYPE MATCHES Release)
+add_executable (Atlas WIN32
+	${src})
+ELSE()
+add_executable (Atlas
+	${src})
+ENDIF(CMAKE_BUILD_TYPE MATCHES Release)
 
 target_include_directories(Atlas
 PUBLIC
