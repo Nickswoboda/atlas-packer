@@ -43,6 +43,7 @@ public:
 
 	void UnpackInputFolders();
 	unsigned int Application::CreateAtlasTexture(int image_index);
+	void CreateAtlasFromCmdLine(int argc, char** argv);
 
 private:
 	bool running_ = true;

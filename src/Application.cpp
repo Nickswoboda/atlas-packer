@@ -42,11 +42,11 @@ Application::Application(int width, int height)
 
 Application::~Application()
 {
-	for (int i = 0; i < MAX_IMAGES; ++i) {
-		if (image_data_.data_[i] != nullptr) {
-			delete[] image_data_.data_[i];
-		}
-	}
+	//for (int i = 0; i < MAX_IMAGES; ++i) {
+	//	if (image_data_.data_[i] != nullptr) {
+	//		delete[] image_data_.data_[i];
+	//	}
+	//}
 	glfwTerminate();
 }
 
@@ -497,6 +497,23 @@ unsigned int Application::CreateAtlasTexture(int image_index)
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image_data_.rects_[image_index].w, image_data_.rects_[image_index].h, 0, GL_RGBA, GL_UNSIGNED_BYTE, image_data_.data_[image_index]);
 
 	return image_texture;
+}
+
+void Application::CreateAtlasFromCmdLine(int argc, char** argv)
+{
+	for (int i = 1; i < argc; ++i) {
+		input_items_.insert(argv[i]);
+	}
+
+	UnpackInputFolders();
+	if (unpacked_items_.empty()) {
+		std::cout << "No valid textures found.\n";
+		return;
+	}
+
+	GetImageData(unpacked_items_, image_data_);
+	atlas_index_ = atlas_packer_.CreateAtlas(image_data_);
+	Save("C:/Images");
 }
 
 void Application::UnpackInputFolders()

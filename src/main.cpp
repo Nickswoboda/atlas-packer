@@ -1,10 +1,15 @@
 #include "Application.h"
 
-int main()
+int main(int argc, char* argv[])
 {
-
 	Application app(520, 720);
-	app.Run();
+
+	if (argc > 1) {
+		app.CreateAtlasFromCmdLine(argc, argv);
+	}
+	else {
+		app.Run();
+	}
 
 	return 0;
 

@@ -18,7 +18,7 @@ struct Rect
 	int h = 0;
 };
 
-constexpr int MAX_IMAGES = 512;
+constexpr int MAX_IMAGES = 256;
 
 struct ImageData
 {
