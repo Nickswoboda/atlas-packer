@@ -501,8 +501,82 @@ unsigned int Application::CreateAtlasTexture(int image_index)
 
 void Application::CreateAtlasFromCmdLine(int argc, char** argv)
 {
-	for (int i = 1; i < argc; ++i) {
-		input_items_.insert(argv[i]);
+	int index = 1;
+	while (index < argc && argv[index][0] != '-') {
+		input_items_.insert(argv[index]);
+		++index;
+	}
+
+	while (index < argc) {
+		std::string option = argv[index];
+		if (option == "-a") {
+			std::string arg = argv[index + 1];
+			if (arg == "MaxRects") {
+				atlas_packer_.algo_ = Algorithm::MaxRects;
+				std::cout << "Setting Algorithm to MaxRects\n";
+			}
+			//additonal increment to use up of arg
+			++index;
+		}
+		else if (option == "-ss") {
+			std::string arg = argv[index + 1];
+			if (arg == "Fixed") {
+				atlas_packer_.size_solver_ = SizeSolver::Fixed;
+				std::cout << "Setting Size Solver to Fixed\n";
+			}
+			if (arg == "Fast") {
+				atlas_packer_.size_solver_ = SizeSolver::Fast;
+				std::cout << "Setting Size Solver to Fast\n";
+			}
+			if (arg == "BestFit") {
+				atlas_packer_.size_solver_ = SizeSolver::BestFit;
+				std::cout << "Setting Size Solver to Best Fit\n";
+			}
+			++index;
+		}
+		else if (option == "-p") {
+			int padding = std::stoi(argv[index + 1]);
+			atlas_packer_.pixel_padding_ = padding;
+			std::cout << "Setting Pixel Padding to" << padding << "\n";
+			++index;
+		}
+		else if (option == "-d") {
+			int width = std::stoi(argv[index + 1]);
+			int height = std::stoi(argv[index + 2]);
+
+			atlas_packer_.max_width_ = width;
+			atlas_packer_.max_height_ = height;
+			std::cout << "Setting Size to " << width << "x" << height << "\n";
+			//additonal increment to use up of arg
+			index +=2 ;
+		}
+		else if (option == "-fs") {
+			atlas_packer_.force_square_ = true;
+			std::cout << "Forcing Square\n";
+		}
+		else if (option == "-pot") {
+			atlas_packer_.pow_of_2_ = true;
+			std::cout << "Forcing PoT\n";
+		}
+		if (option == "-of") {
+			std::string arg = argv[index + 1];
+			if (arg == "jpg") {
+				save_file_format_ = SaveFileFormat::JPG;
+				std::cout << "Setting Format to Jpg\n";
+			}
+			else if (arg == "png") {
+				save_file_format_ = SaveFileFormat::PNG;
+				std::cout << "Setting Format to PNG\n";
+			}
+
+		}
+		if (option == "-od") {
+			save_folder_path_ = argv[index + 1];
+			std::cout << "Setting Save Folder to " << save_folder_path_ << "\n";
+			++index;
+		}
+
+		++index;
 	}
 
 	UnpackInputFolders();
@@ -513,7 +587,11 @@ void Application::CreateAtlasFromCmdLine(int argc, char** argv)
 
 	GetImageData(unpacked_items_, image_data_);
 	atlas_index_ = atlas_packer_.CreateAtlas(image_data_);
-	Save("C:/Images");
+
+	if (save_folder_path_.empty()) {
+		save_folder_path_ = "C:/images";
+	}
+	Save(save_folder_path_);
 }
 
 void Application::UnpackInputFolders()
