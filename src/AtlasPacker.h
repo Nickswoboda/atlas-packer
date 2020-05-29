@@ -45,10 +45,8 @@ public:
 
 	bool EnclosedInRect(const Rect& a, const Rect& b);
 	
-	int max_width_ = MAX_DIMENSIONS;
-	int max_height_ = MAX_DIMENSIONS;
-	int fixed_width_ = MAX_DIMENSIONS;
-	int fixed_height_ = MAX_DIMENSIONS;
+	int width_ = MAX_DIMENSIONS;
+	int height_ = MAX_DIMENSIONS;
 	bool force_square_ = false;
 
 	int pixel_padding_ = 0;

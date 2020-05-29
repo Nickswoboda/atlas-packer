@@ -260,31 +260,27 @@ void Application::RenderInputState()
 
 	if (atlas_packer_.size_solver_ == SizeSolver::Fixed) {
 		ImGui::Text("Fixed Width: ");
-		ImGui::SameLine(100);
-		if (ImGui::InputInt("##FixedWidth", &atlas_packer_.fixed_width_)) {
-			atlas_packer_.fixed_width_ = std::clamp(atlas_packer_.fixed_width_, 0, MAX_DIMENSIONS);
-		}
-
-		ImGui::Text("Fixed Height: ");
-		ImGui::SameLine(100);
-		if (ImGui::InputInt("##FixedHeight", &atlas_packer_.fixed_height_)) {
-			atlas_packer_.fixed_height_ = std::clamp(atlas_packer_.fixed_height_, 0, MAX_DIMENSIONS);
-		}
 	}
 	else {
 		ImGui::Text("Max Width: ");
-		ImGui::SameLine(100);
-		if (ImGui::InputInt("##MaxWidth", &atlas_packer_.max_width_)) {
-			atlas_packer_.max_width_ = std::clamp(atlas_packer_.max_width_, 0, MAX_DIMENSIONS);
-		}
+	}
+	ImGui::SameLine(100);
+	if (ImGui::InputInt("##Width", &atlas_packer_.width_)) {
+		atlas_packer_.width_ = std::clamp(atlas_packer_.width_, 0, MAX_DIMENSIONS);
+	}
 
+	if (atlas_packer_.size_solver_ == SizeSolver::Fixed) {
+			ImGui::Text("Fixed Height: ");
+		}
+	else {
 
 		ImGui::Text("Max Height: ");
-		ImGui::SameLine(100);
-		if (ImGui::InputInt("##MaxHeight", &atlas_packer_.max_height_)) {
-			atlas_packer_.max_height_ = std::clamp(atlas_packer_.max_height_, 0, MAX_DIMENSIONS);
-		}
 	}
+	ImGui::SameLine(100);
+	if (ImGui::InputInt("##FixedHeight", &atlas_packer_.height_)) {
+			atlas_packer_.height_ = std::clamp(atlas_packer_.height_, 0, MAX_DIMENSIONS);
+	}
+	
 
 	if (!(atlas_packer_.size_solver_ == SizeSolver::Fixed)) {
 		ImGui::Text("Force Square: ");
@@ -544,8 +540,8 @@ void Application::CreateAtlasFromCmdLine(int argc, char** argv)
 			int width = std::stoi(argv[index + 1]);
 			int height = std::stoi(argv[index + 2]);
 
-			atlas_packer_.max_width_ = width;
-			atlas_packer_.max_height_ = height;
+			atlas_packer_.width_ = width;
+			atlas_packer_.height_ = height;
 			std::cout << "Setting Size to " << width << "x" << height << "\n";
 			//additonal increment to use up of arg
 			index +=2 ;
