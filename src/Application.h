@@ -44,6 +44,7 @@ public:
 	void UnpackInputFolders();
 	unsigned int Application::CreateAtlasTexture(int image_index);
 	void CreateAtlasFromCmdLine(int argc, char** argv);
+	bool IsNumber(const std::string& value);
 
 private:
 	bool running_ = true;

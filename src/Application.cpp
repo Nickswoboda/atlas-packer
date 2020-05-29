@@ -506,70 +506,125 @@ void Application::CreateAtlasFromCmdLine(int argc, char** argv)
 	while (index < argc) {
 		std::string option = argv[index];
 		if (option == "-a") {
+			if (index + 1 >= argc) {
+				std::cout << "no arguments have been provided for " << option << "\n";
+				return;
+			}
 			std::string arg = argv[index + 1];
-			if (arg == "MaxRects") {
+			if (arg == "max-rects") {
 				atlas_packer_.algo_ = Algorithm::MaxRects;
-				std::cout << "Setting Algorithm to MaxRects\n";
+			}
+			//Shelf is default so no need to set
+			else if (arg != "shelf") {
+				std::cout << arg << " is not a valid algorithm\n";
+				return;
 			}
 			//additonal increment to use up of arg
 			++index;
 		}
 		else if (option == "-ss") {
+			if (index + 1 >= argc) {
+				std::cout << "no arguments have been provided for " << option << "\n";
+				return;
+			}
 			std::string arg = argv[index + 1];
-			if (arg == "Fixed") {
+			if (arg == "fixed") {
 				atlas_packer_.size_solver_ = SizeSolver::Fixed;
-				std::cout << "Setting Size Solver to Fixed\n";
 			}
-			if (arg == "Fast") {
+			else if (arg == "fast") {
 				atlas_packer_.size_solver_ = SizeSolver::Fast;
-				std::cout << "Setting Size Solver to Fast\n";
 			}
-			if (arg == "BestFit") {
+			else if (arg == "best-fit") {
 				atlas_packer_.size_solver_ = SizeSolver::BestFit;
-				std::cout << "Setting Size Solver to Best Fit\n";
+			}
+			else {
+				std::cout << arg << " is not a valid size solver\n";
+				return;
 			}
 			++index;
 		}
 		else if (option == "-p") {
+			if (index + 1 >= argc) {
+				std::cout << "no arguments have been provided for " << option << "\n";
+				return;
+			}
+			if (!IsNumber(argv[index + 1])) {
+				std::cout << argv[index + 1] << " is not a valid number\n";
+				return;
+			}
 			int padding = std::stoi(argv[index + 1]);
+			if (padding > 32) {
+				std::cout << "The maximum pixel padding allowed is 32\n";
+				return;
+			}
 			atlas_packer_.pixel_padding_ = padding;
-			std::cout << "Setting Pixel Padding to" << padding << "\n";
 			++index;
 		}
 		else if (option == "-d") {
+			if (index + 1 >= argc || index + 2 >= argc) {
+				std::cout << "no arguments have been provided for " << option << "\n";
+				return;
+			}
+			if (!IsNumber(argv[index + 1]) || !IsNumber(argv[index + 2])) {
+				std::cout << argv[index + 1] << "x" << argv[index+2] << " is not a valid size\n";
+				return;
+			}
+
 			int width = std::stoi(argv[index + 1]);
 			int height = std::stoi(argv[index + 2]);
+			if (width > 4096 || height > 4096) {
+				std::cout << "The maximum dimensions are 4096x4096\n";
+				return;
+			}
 
 			atlas_packer_.width_ = width;
 			atlas_packer_.height_ = height;
-			std::cout << "Setting Size to " << width << "x" << height << "\n";
-			//additonal increment to use up of arg
+			//additonal increment to use up both arg
 			index +=2 ;
 		}
 		else if (option == "-fs") {
 			atlas_packer_.force_square_ = true;
-			std::cout << "Forcing Square\n";
+			if (atlas_packer_.size_solver_ == SizeSolver::Fixed) {
+				std::cout << "Forced Square is ignored for fixed size atlases\n";
+			}
 		}
 		else if (option == "-pot") {
 			atlas_packer_.pow_of_2_ = true;
-			std::cout << "Forcing PoT\n";
+			if (atlas_packer_.size_solver_ == SizeSolver::Fixed) {
+				std::cout << "Power of 2 is ignored for fixed size atlases\n";
+			}
 		}
-		if (option == "-of") {
+		else if (option == "-of") {
+			if (index + 1 >= argc) {
+				std::cout << "no arguments have been provided for " << option << "\n";
+				return;
+			}
 			std::string arg = argv[index + 1];
 			if (arg == "jpg") {
 				save_file_format_ = SaveFileFormat::JPG;
-				std::cout << "Setting Format to Jpg\n";
 			}
-			else if (arg == "png") {
-				save_file_format_ = SaveFileFormat::PNG;
-				std::cout << "Setting Format to PNG\n";
+			//png is default
+			else if (arg != "png") {
+				std::cout << arg << " is not a valid file format\n";
 			}
 
 		}
-		if (option == "-od") {
-			save_folder_path_ = argv[index + 1];
-			std::cout << "Setting Save Folder to " << save_folder_path_ << "\n";
+		else if (option == "-od") {
+			if (index + 1 >= argc) {
+				std::cout << "no arguments have been provided for " << option << "\n";
+				return;
+			}
+			std::filesystem::path dir(argv[index + 1]);
+			if (std::filesystem::is_directory(dir)){
+				save_folder_path_ = dir.generic_u8string();
+			}
+			else {
+				std::cout << argv[index + 1] << "is not a valid directory\n";
+			}
 			++index;
+		}
+		else {
+			std::cout << option << " is an invalid command\n";
 		}
 
 		++index;
@@ -583,11 +638,24 @@ void Application::CreateAtlasFromCmdLine(int argc, char** argv)
 
 	GetImageData(unpacked_items_, image_data_);
 	atlas_index_ = atlas_packer_.CreateAtlas(image_data_);
-
-	if (save_folder_path_.empty()) {
-		save_folder_path_ = "C:/images";
-	}
 	Save(save_folder_path_);
+
+	std::cout << "Atlas creation complete\n" <<
+		"Time to pack: " << atlas_packer_.stats_.time_elapsed_in_ms << "ms\n" <<
+		"Unused area:  " << atlas_packer_.stats_.unused_area << "px\n" <<
+		"Packing efficiency: " << std::fixed << std::setprecision(2) << atlas_packer_.stats_.packing_efficiency << "%\n";
+	std::cout << "Atlas saved to " << save_folder_path_ << "\n";
+}
+
+bool Application::IsNumber(const std::string& value)
+{
+	for (const auto& c : value) {
+		if (!std::isdigit(c)) {
+			return false;
+		}
+	}
+
+	return true;
 }
 
 void Application::UnpackInputFolders()
