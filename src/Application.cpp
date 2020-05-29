@@ -38,6 +38,8 @@ Application::Application(int width, int height)
 	glfwSetWindowUserPointer(window_.glfw_window_, this);
 
 	state_stack_.push(State::Input);
+
+	save_folder_path_ = std::filesystem::current_path().u8string();
 }
 
 Application::~Application()
