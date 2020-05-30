@@ -18,12 +18,12 @@ struct Rect
 	int h = 0;
 };
 
-constexpr int MAX_IMAGES = 256;
+constexpr int MAX_IMAGES = 512;
 
 struct ImageData
 {
 	Rect rects_[MAX_IMAGES];
-	unsigned char* data_[MAX_IMAGES];
+	unsigned char* data_[MAX_IMAGES] = { 0 };
 	std::string paths_[MAX_IMAGES];
 
 	int num_images_ = 0;
