@@ -102,7 +102,6 @@ int AtlasPacker::CreateAtlas(ImageData& image_data)
 		}
 	}
 
-
 	std::chrono::steady_clock::time_point end_time = std::chrono::high_resolution_clock::now();
 
 	stats_.atlas_area = size_.x * size_.y;
@@ -257,30 +256,6 @@ bool AtlasPacker::PackAtlasMaxRects(ImageData& images, Vec2 size)
 		}
 	}
 
-	//for (const auto& rect : free_rects_) {
-	//
-	//	unsigned char* data = new unsigned char[(size_t)rect.w * rect.h * 4]();
-	//	for (int row = 0; row < rect.h; ++row) {
-	//		for (int col = 0; col < rect.w * 4; col += 4) {
-	//			if (row < 1 || col < 1) {
-	//				data[row * (rect.w * 4) + col] = 225;
-	//				data[row * (rect.w * 4) + col + 1] = 225;
-	//				data[row * (rect.w * 4) + col + 2] = 225;
-	//				data[row * (rect.w * 4) + col + 3] = 225;
-	//			}
-	//			else {
-	//				data[row * (rect.w * 4) + col] = 225;
-	//				data[row * (rect.w * 4) + col + 1] = 0;
-	//				data[row * (rect.w * 4) + col + 2] = 0;
-	//				data[row * (rect.w * 4) + col + 3] = 225;
-	//			}
-	//		}
-	//	}
-	//	images.rects_[images.num_images_] = rect;
-	//	images.data_[images.num_images_] = data;
-	//	++images.num_images_;
-	//}
-
 	return true;
 }
 
@@ -370,12 +345,10 @@ Vec2 AtlasPacker::EstimateAtlasSize(const ImageData& images)
 	Vec2 size{ 64, 64 };
 	while (size.x * size.y < stats_.total_images_area) {
 		if (pow_of_2_) {
-			size.x *= 2;
-			size.y *= 2;
+			size.x == size.y ? size.y *= 2 : size.x = size.y;
 		}
 		else {
-			size.x += 32;
-			size.y += 32;
+			size.x == size.y ? size.y += 32 : size.x = size.y;
 		}
 	}
 	return size;
@@ -417,6 +390,6 @@ void AtlasPacker::PushSplitRects(std::vector<Rect>& rects, const Rect& new_rect,
 
 bool AtlasPacker::EnclosedInRect(const Rect& a, const Rect& b)
 {
-	return (a.x >= b.x && a.x + a.w <= b.x + b.w &&
-			a.y >= b.y && a.y + a.h <= b.y + b.h);
+	return (a.y >= b.y && a.x >= b.x &&
+			a.x + a.w <= b.x + b.w && a.y + a.h <= b.y + b.h);
 }
