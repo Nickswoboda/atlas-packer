@@ -39,67 +39,28 @@ int AtlasPacker::CreateAtlas(ImageData& image_data)
 
 	stats_.total_images_area = 0;
 
-	if (size_solver_ == SizeSolver::BestFit) {
+	//Get heap of all possible sizes sorted by ascending area. If size solver is best fit and neither force square or power of 2, instead of storing all possible combinations, 
+	//only store all possible heights with a minimum width. After each iteration, increase the width by 1 and push back into heap. Greatly reducing space complexity.
+	GetPossibleContainers(image_data, possible_sizes_);
 
-		//get heap of Vec2 sizes with x = min image width and y = 0 to 4096
-		GetPossibleContainers(image_data, possible_sizes_);
+	//sort heap by min area, try top of heap. If it does not work, increase the width and push back into heap. repeat until successful 
+	while (!PackAtlas(image_data, size_)) {
 
-		//sort heap by min area, try top of heap. If it does not work, increase the width and push back into heap. repeat until successful 
-		while (!PackAtlas(image_data, size_)) {
-
-			if (force_square_ || pow_of_2_) {
-				if (possible_sizes_.empty()) {
-					return -1;
-				}
-				std::pop_heap(possible_sizes_.begin(), possible_sizes_.end(), [](Vec2 a, Vec2 b) { return a.x * a.y > b.x * b.y; });
-				size_ = possible_sizes_.back();
-				possible_sizes_.pop_back();
-			}
-			else {
-				++size_.x;
-				//do not put back into heap if it will be larger than the maximum width of 4096
-				if (!(size_.x > width_)) {
-					possible_sizes_.push_back(size_);
-					std::push_heap(possible_sizes_.begin(), possible_sizes_.end(), [](Vec2 a, Vec2 b) { return a.x * a.y > b.x * b.y; });
-				}
-
-				if (possible_sizes_.empty()) {
-					return -1;
-				}
-
-				std::pop_heap(possible_sizes_.begin(), possible_sizes_.end(), [](Vec2 a, Vec2 b) { return a.x * a.y > b.x * b.y; });
-				size_ = possible_sizes_.back();
-				possible_sizes_.pop_back();
-			}
-
-		}
-	}
-	else { 
-		if (size_solver_ == SizeSolver::Fixed) {
-			size_ = { width_, height_ };
-		}
-		//if not fixed, then fast
-		else {
-			size_ = EstimateAtlasSize(image_data);
-		}
-
-		while (!PackAtlas(image_data, size_)) {
-
-			if (size_solver_ == SizeSolver::Fixed) {
-				return -1;
-			}
-			else{
-				//every iteration increase either by 64px or double size if pow_of_two is enabled
-				size_.x == size_.y ? (size_.y += pow_of_2_ ? size_.y : 32) : size_.x = size_.y;
-				if (force_square_) {
-					size_.x = size_.y;
-				}
-
-				if (size_.x > width_ || size_.y > height_) {
-					return -1;
-				}
+		if (size_solver_ == SizeSolver::BestFit) {
+			++size_.x;
+			//do not put back into heap if it will be larger than the maximum width of 4096
+			if (!(size_.x > max_width_)) {
+				possible_sizes_.push_back(size_);
+				std::push_heap(possible_sizes_.begin(), possible_sizes_.end(), [](Vec2 a, Vec2 b) { return a.x * a.y > b.x * b.y; });
 			}
 		}
+
+		if (possible_sizes_.empty()) {
+			return -1;
+		}
+		std::pop_heap(possible_sizes_.begin(), possible_sizes_.end(), [](Vec2 a, Vec2 b) { return a.x * a.y > b.x * b.y; });
+		size_ = possible_sizes_.back();
+		possible_sizes_.pop_back();
 	}
 
 	std::chrono::steady_clock::time_point end_time = std::chrono::high_resolution_clock::now();
@@ -115,6 +76,7 @@ int AtlasPacker::CreateAtlas(ImageData& image_data)
 	WriteAtlasImageData(image_data, size_.x, size_.y);
 
 	possible_sizes_.clear();
+	size_ = { 0,0 };
 
 	return image_data.num_images_;
 }
@@ -272,60 +234,87 @@ bool AtlasPacker::IntersectsRect(const Rect& new_rect, const Rect& free_rect)
 
 void AtlasPacker::GetPossibleContainers(const ImageData& images, std::vector<Vec2>& possible_sizes)
 {
-	int min_width = 0;
-	int min_height = 0;
-	int max_height = 0;
 	for (int i = 0; i < images.num_images_; ++i) {
-		if (images.rects_[i].w > min_width) {
-			min_width = images.rects_[i].w;
-		}
-
-		max_height += images.rects_[i].h;
-		if (images.rects_[i].h > min_height) {
-			min_height = images.rects_[i].h;
-		}
 		stats_.total_images_area += images.rects_[i].w * images.rects_[i].h;
 	}
 
-	max_height = std::min(max_height, height_);
+	switch (size_solver_) {
+		case SizeSolver::Fixed: { possible_sizes_.push_back({ max_width_, max_height_ }); break; }
+		
+		case SizeSolver::Fast: {
 
-	if (pow_of_2_) {
-		for (int w = 1; w < width_; w *= 2) {
-			if (force_square_ && w * w > stats_.total_images_area) {
-				possible_sizes.push_back({ w, w });
+			Vec2 size{ 32, 32 };
+			while (size.x <= max_width_ && size.y <= max_height_) {
+				
+				size.x == size.y ? (size.x += pow_of_2_ ? size.x : 32) : size.y = size.x;
+				if (force_square_) { 
+					size.y = size.x; 
+				}
+
+				if (size.x * size.y > stats_.total_images_area) {
+					possible_sizes.push_back(size);
+				}
+			}
+			break;
+		}
+
+		case SizeSolver::BestFit: {
+
+			int min_width = 0;
+			int min_height = 0;
+			int max_height = 0;
+			for (int i = 0; i < images.num_images_; ++i) {
+				if (images.rects_[i].w > min_width) {
+					min_width = images.rects_[i].w;
+				}
+
+				max_height += images.rects_[i].h;
+				if (images.rects_[i].h > min_height) {
+					min_height = images.rects_[i].h;
+				}
+			}
+
+			max_height = std::min(max_height, max_height_);
+
+			if (pow_of_2_) {
+				for (int w = 1; w < max_width_; w *= 2) {
+					if (force_square_ && w * w > stats_.total_images_area) {
+						possible_sizes.push_back({ w, w });
+					}
+					else {
+						for (int h = 1; h < max_height_; h *= 2) {
+							if (w * h > stats_.total_images_area) {
+								possible_sizes.push_back({ w, h });
+							}
+						}
+					}
+				}
 			}
 			else {
-				for (int h = 1; h < height_; h *= 2) {
-					if (w * h > stats_.total_images_area) {
-						possible_sizes.push_back({ w, h });
+				for (int h = min_height; h < max_height; ++h) {
+
+					if (force_square_ && h * h > stats_.total_images_area) {
+						possible_sizes.push_back({ h, h });
+					}
+					else {
+						int w = min_width;
+						while (w * h < stats_.total_images_area) {
+							++w;
+						}
+						if (w <= max_width_) {
+							if (force_square_ && w != h) {
+								continue;
+							}
+							possible_sizes.push_back({ w, h });
+						}
 					}
 				}
 			}
 		}
 	}
-	else {
-		for (int h = min_height; h < max_height; ++h) {
 
-			if (force_square_ && h * h > stats_.total_images_area) {
-				possible_sizes.push_back({ h, h });
-			}
-			else {
-				int w = min_width;
-				while (w * h < stats_.total_images_area) {
-					++w;
-				}
-				if (w <= width_) {
-					if (force_square_ && w != h) {
-						continue;
-					}
-					possible_sizes.push_back({ w, h });
-				}
-			}
-		}
-	}
 	
 	//sort by smallest area and pop smallest fit into size_
-
 	if (possible_sizes.empty()) {
 		return;
 	}
@@ -334,24 +323,6 @@ void AtlasPacker::GetPossibleContainers(const ImageData& images, std::vector<Vec
 	std::pop_heap(possible_sizes.begin(), possible_sizes.end(), [](Vec2 a, Vec2 b) { return a.x * a.y > b.x * b.y; });
 	size_ = possible_sizes.back();
 	possible_sizes.pop_back();
-}
-
-Vec2 AtlasPacker::EstimateAtlasSize(const ImageData& images)
-{
-	for (int i = 0; i < images.num_images_; ++i){
-		stats_.total_images_area += images.rects_[i].w * images.rects_[i].h;
-	}
-
-	Vec2 size{ 64, 64 };
-	while (size.x * size.y < stats_.total_images_area) {
-		if (pow_of_2_) {
-			size.x == size.y ? size.y *= 2 : size.x = size.y;
-		}
-		else {
-			size.x == size.y ? size.y += 32 : size.x = size.y;
-		}
-	}
-	return size;
 }
 
 void AtlasPacker::PushSplitRects(std::vector<Rect>& rects, const Rect& new_rect, const Rect free_rect)

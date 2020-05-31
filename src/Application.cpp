@@ -267,8 +267,8 @@ void Application::RenderInputState()
 		ImGui::Text("Max Width: ");
 	}
 	ImGui::SameLine(100);
-	if (ImGui::InputInt("##Width", &atlas_packer_.width_)) {
-		atlas_packer_.width_ = std::clamp(atlas_packer_.width_, 0, MAX_DIMENSIONS);
+	if (ImGui::InputInt("##Width", &atlas_packer_.max_width_)) {
+		atlas_packer_.max_width_ = std::clamp(atlas_packer_.max_width_, 0, MAX_DIMENSIONS);
 	}
 
 	if (atlas_packer_.size_solver_ == SizeSolver::Fixed) {
@@ -279,8 +279,8 @@ void Application::RenderInputState()
 		ImGui::Text("Max Height: ");
 	}
 	ImGui::SameLine(100);
-	if (ImGui::InputInt("##FixedHeight", &atlas_packer_.height_)) {
-			atlas_packer_.height_ = std::clamp(atlas_packer_.height_, 0, MAX_DIMENSIONS);
+	if (ImGui::InputInt("##FixedHeight", &atlas_packer_.max_height_)) {
+			atlas_packer_.max_height_ = std::clamp(atlas_packer_.max_height_, 0, MAX_DIMENSIONS);
 	}
 	
 
@@ -335,7 +335,7 @@ void Application::RenderOutputState()
 {
 	ImGui::Text("Preview");
 
-	if (atlas_texture_ID_ == -1) {
+	if (atlas_texture_ID_ == -1 || atlas_index_ == -1) {
 		ImGuiErrorText("Unable to create atlas");
 	}
 	else {
@@ -579,8 +579,8 @@ void Application::CreateAtlasFromCmdLine(int argc, char** argv)
 				return;
 			}
 
-			atlas_packer_.width_ = width;
-			atlas_packer_.height_ = height;
+			atlas_packer_.max_width_ = width;
+			atlas_packer_.max_height_ = height;
 			//additonal increment to use up both arg
 			index +=2 ;
 		}

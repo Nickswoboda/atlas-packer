@@ -40,13 +40,12 @@ public:
 	bool IntersectsRect(const Rect& new_rect, const Rect& free_rect);
 
 	void GetPossibleContainers(const ImageData& images, std::vector<Vec2>& possible_sizes);
-	Vec2 EstimateAtlasSize(const ImageData& images);
 	void PushSplitRects(std::vector<Rect>& rects, const Rect& new_rect, Rect free_rect);
 
 	bool EnclosedInRect(const Rect& a, const Rect& b);
 	
-	int width_ = MAX_DIMENSIONS;
-	int height_ = MAX_DIMENSIONS;
+	int max_width_ = MAX_DIMENSIONS;
+	int max_height_ = MAX_DIMENSIONS;
 	bool force_square_ = false;
 
 	int pixel_padding_ = 0;
