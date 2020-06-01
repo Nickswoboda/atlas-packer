@@ -1,5 +1,7 @@
 #include "AtlasPacker.h"
 
+#include "MaxRects.h"
+
 #include <iostream>
 #include <sstream>
 #include <chrono>
@@ -98,12 +100,11 @@ std::string AtlasPacker::GetAtlasMetadata(const ImageData& images)
 
 bool AtlasPacker::PackAtlas(ImageData& images, Vec2 size)
 {
-	return algo_ == Algorithm::Shelf ? PackAtlasShelf(images, size) : PackAtlasMaxRects(images, size);
+	return algo_ == Algorithm::Shelf ? PackAtlasShelf(images, size) : MaxRects::PackAtlas(images, size, sorted_indices_, pixel_padding_);
 }
 
 bool AtlasPacker::PackAtlasShelf(ImageData& images, Vec2 size)
 {
-
 	int pen_x = 0, pen_y = 0;
 	int next_pen_y = images.rects_[sorted_indices_[0]].h;
 
@@ -124,89 +125,6 @@ bool AtlasPacker::PackAtlasShelf(ImageData& images, Vec2 size)
 		images.rects_[sorted_indices_[i]].y = pen_y;
 
 		pen_x += images.rects_[sorted_indices_[i]].w + pixel_padding_;
-	}
-
-	return true;
-}
-
-bool AtlasPacker::PackAtlasMaxRects(ImageData& images, Vec2 size)
-{
-	std::vector<Rect> free_rects;
-	free_rects.reserve(images.num_images_ * 2);
-	//start with whole atlas being available
-	free_rects.push_back({ 0,0, size.x, size.y });
-
-	for (int image = 0; image < images.num_images_; ++image){
-
-		if (free_rects.empty()) {
-			return false; 
-		}
-
-		int curr_idx = sorted_indices_[image];
-
-		int best_short_side_fit = MAX_DIMENSIONS;
-		int best_fit_index = 0;
-		for (int i = 0; i < free_rects.size(); ++i) {
-				int leftover_width = free_rects[i].w - images.rects_[curr_idx].w;
-				int leftover_height = free_rects[i].h - images.rects_[curr_idx].h;
-				int shortest_side = std::min(leftover_width, leftover_height);
-
-				//if shortest side < 0 then image did not fit into free rect
-				if (shortest_side >= 0 && shortest_side < best_short_side_fit) {
-					best_short_side_fit = shortest_side;
-					best_fit_index = i;
-				}
-		}
-
-		//didnt find any fits
-		if (best_short_side_fit == MAX_DIMENSIONS) {
-			return false;
-		}
-
-		images.rects_[curr_idx].x = free_rects[best_fit_index].x;
-		images.rects_[curr_idx].y = free_rects[best_fit_index].y;
-
-		//used to not waste time going over the new split rects that are added
-		int num_rects_left = free_rects.size();
-		for (int i = 0; i < num_rects_left; ++i) {
-			if (IntersectsRect(images.rects_[curr_idx], free_rects[i])){
-				//split intersected free rects into at most 4 new smaller rects
-				PushSplitRects(free_rects, images.rects_[curr_idx], free_rects[i]);
-
-				free_rects.erase(free_rects.begin() + i);
-				--i;
-				--num_rects_left;
-			}
-		}
-
-		//prune any free rects that are completely enclosed within another
-		for (int i = 0; i < free_rects.size(); ++i) {
-			for (int j = i + 1; j < free_rects.size(); ++j) {
-				//if j is enclosed in k, remove j
-				if (EnclosedInRect(free_rects[i], free_rects[j])){
-					free_rects.erase(free_rects.begin() + i);
-					--i;
-					break;
-				}
-				//vice versa
-				else if (EnclosedInRect(free_rects[j], free_rects[i])) {
-					free_rects.erase(free_rects.begin() + j);
-					--j;
-				}
-		
-			}
-		}
-	}
-
-	return true;
-}
-
-bool AtlasPacker::IntersectsRect(const Rect& new_rect, const Rect& free_rect)
-{
-	//separating axis theorem
-	if (new_rect.x >= free_rect.x + free_rect.w || new_rect.x + new_rect.w <= free_rect.x ||
-		new_rect.y >= free_rect.y + free_rect.h || new_rect.y + new_rect.h <= free_rect.y) {
-		return false;
 	}
 
 	return true;
@@ -284,46 +202,6 @@ void AtlasPacker::GetPossibleContainers(const ImageData& images, std::vector<Vec
 	std::pop_heap(possible_sizes.begin(), possible_sizes.end(), [](Vec2 a, Vec2 b) { return a.x * a.y > b.x * b.y; });
 	size_ = possible_sizes.back();
 	possible_sizes.pop_back();
-}
-
-void AtlasPacker::PushSplitRects(std::vector<Rect>& rects, const Rect& new_rect, const Rect free_rect)
-{
-	//top rect
-	if (new_rect.y > free_rect.y){
-		Rect temp = free_rect;
-		temp.h = new_rect.y - free_rect.y - pixel_padding_;
-		rects.push_back(temp);
-	}
-
-	//bottom rect
-	if (free_rect.y + free_rect.h > new_rect.y + new_rect.h) {
-		Rect temp = free_rect;
-		temp.y = new_rect.y + new_rect.h + pixel_padding_;
-		temp.h = free_rect.y + free_rect.h - (new_rect.y + new_rect.h) - pixel_padding_;
-		rects.push_back(temp);
-	}
-
-	//left rect
-	if (new_rect.x > free_rect.x) {
-		Rect temp = free_rect;
-		temp.w = new_rect.x - free_rect.x - pixel_padding_;
-		rects.push_back(temp);
-	}
-
-	//right rect
-	if (free_rect.x + free_rect.w > new_rect.x + new_rect.w) {
-		Rect temp = free_rect;
-		temp.x = new_rect.x + new_rect.w + pixel_padding_;
-		temp.w = free_rect.x + free_rect.w - (new_rect.x + new_rect.w) - pixel_padding_;
-		rects.push_back(temp);
-	}
-	
-}
-
-bool AtlasPacker::EnclosedInRect(const Rect& a, const Rect& b)
-{
-	return (a.y >= b.y && a.x >= b.x &&
-			a.x + a.w <= b.x + b.w && a.y + a.h <= b.y + b.h);
 }
 
 //sort image data without affected underlying structure

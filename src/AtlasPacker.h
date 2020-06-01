@@ -27,6 +27,7 @@ enum class SizeSolver
 	Fast,
 	BestFit
 };
+
 class AtlasPacker
 {
 public:
@@ -36,13 +37,8 @@ public:
 	void WriteAtlasImageData(ImageData& images, int width, int height);
 	bool PackAtlas(ImageData& images, Vec2 size);
 	bool PackAtlasShelf(ImageData& images, Vec2 size);
-	bool PackAtlasMaxRects(ImageData& images, Vec2 size);
-	bool IntersectsRect(const Rect& new_rect, const Rect& free_rect);
 
 	void GetPossibleContainers(const ImageData& images, std::vector<Vec2>& possible_sizes);
-	void PushSplitRects(std::vector<Rect>& rects, const Rect& new_rect, Rect free_rect);
-
-	bool EnclosedInRect(const Rect& a, const Rect& b);
 	std::vector<int> GetSortedIndices(const ImageData& images);
 	
 	int max_width_ = MAX_DIMENSIONS;

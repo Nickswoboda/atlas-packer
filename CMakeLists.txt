@@ -26,7 +26,7 @@ set (src 	"src/main.cpp"
  "src/ImageData.cpp" "src/AtlasPacker.cpp")
 
 add_executable (Atlas WIN32
-	${src})
+	${src} "src/MaxRects.cpp")
 
 target_include_directories(Atlas
 PUBLIC
