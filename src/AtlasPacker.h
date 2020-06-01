@@ -43,6 +43,7 @@ public:
 	void PushSplitRects(std::vector<Rect>& rects, const Rect& new_rect, Rect free_rect);
 
 	bool EnclosedInRect(const Rect& a, const Rect& b);
+	std::vector<int> GetSortedIndices(const ImageData& images);
 	
 	int max_width_ = MAX_DIMENSIONS;
 	int max_height_ = MAX_DIMENSIONS;
@@ -57,4 +58,5 @@ public:
 	Vec2 size_;
 	std::string metadata_;
 	Stats stats_;
+	std::vector<int> sorted_indices_;
 };
