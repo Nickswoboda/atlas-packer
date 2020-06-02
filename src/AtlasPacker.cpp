@@ -32,6 +32,9 @@ void AtlasPacker::WriteAtlasImageData(ImageData& images, int width, int height)
 
 	//set atlas data to be at the end of all images
 	images.rects_[images.num_images_] = { 0, 0, width, height };
+	if (images.data_[images.num_images_] != nullptr) {
+		delete images.data_[images.num_images_];
+	}
 	images.data_[images.num_images_] = pixels;
 }
 
