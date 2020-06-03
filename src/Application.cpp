@@ -443,10 +443,10 @@ void Application::CreateAtlasFromCmdLine(int argc, char** argv)
 	}
 
 	while (index < argc) {
-		std::string command = argv[index];
-		if (command == "-a" || command == "-algorithm") {
+		std::string option = argv[index];
+		if (option == "-a" || option == "--algorithm") {
 			if (index + 1 >= argc) {
-				std::cout << "No arguments have been provided for " << command << "\n";
+				std::cout << "No arguments have been provided for " << option << "\n";
 				return;
 			}
 			std::string arg = argv[index + 1];
@@ -461,9 +461,9 @@ void Application::CreateAtlasFromCmdLine(int argc, char** argv)
 			//additonal increment to go past arg and get to next option
 			++index;
 		}
-		else if (command == "-ss" || command == "-size-solver") {
+		else if (option == "-ss" || option == "--size-solver") {
 			if (index + 1 >= argc) {
-				std::cout << "No arguments have been provided for " << command << ".\n";
+				std::cout << "No arguments have been provided for " << option << ".\n";
 				return;
 			}
 			std::string arg = argv[index + 1];
@@ -482,9 +482,9 @@ void Application::CreateAtlasFromCmdLine(int argc, char** argv)
 			}
 			++index;
 		}
-		else if (command == "-p" || command == "-padding") {
+		else if (option == "-p" || option == "--padding") {
 			if (index + 1 >= argc) {
-				std::cout << "No arguments have been provided for " << command << ".\n";
+				std::cout << "No arguments have been provided for " << option << ".\n";
 				return;
 			}
 			if (!IsNumber(argv[index + 1])) {
@@ -499,9 +499,9 @@ void Application::CreateAtlasFromCmdLine(int argc, char** argv)
 			atlas_packer_.pixel_padding_ = padding;
 			++index;
 		}
-		else if (command == "-d" || command == "-dimensions") {
+		else if (option == "-d" || option == "--dimensions") {
 			if (index + 1 >= argc || index + 2 >= argc) {
-				std::cout << "No arguments have been provided for " << command << ".\n";
+				std::cout << "No arguments have been provided for " << option << ".\n";
 				return;
 			}
 			if (!IsNumber(argv[index + 1]) || !IsNumber(argv[index + 2])) {
@@ -521,21 +521,21 @@ void Application::CreateAtlasFromCmdLine(int argc, char** argv)
 			//additonal increment to use up both arg
 			index +=2 ;
 		}
-		else if (command == "-fs" || command == "-force-square") {
+		else if (option == "-fs" || option == "--force-square") {
 			atlas_packer_.force_square_ = true;
 			if (atlas_packer_.size_solver_ == SizeSolver::Fixed) {
 				std::cout << "Forced Square is ignored for fixed size atlases.\n";
 			}
 		}
-		else if (command == "-pot" || command == "-power-of-two") {
+		else if (option == "-pot" || option == "--power-of-two") {
 			atlas_packer_.pow_of_2_ = true;
 			if (atlas_packer_.size_solver_ == SizeSolver::Fixed) {
 				std::cout << "Power of 2 is ignored for fixed size atlases.\n";
 			}
 		}
-		else if (command == "-of" || command == "-output-format") {
+		else if (option == "-of" || option == "--output-format") {
 			if (index + 1 >= argc) {
-				std::cout << "No arguments have been provided for " << command << ".\n";
+				std::cout << "No arguments have been provided for " << option << ".\n";
 				return;
 			}
 			std::string arg = argv[index + 1];
@@ -548,9 +548,9 @@ void Application::CreateAtlasFromCmdLine(int argc, char** argv)
 			}
 
 		}
-		else if (command == "-od" || command == "-output-directory") {
+		else if (option == "-od" || option == "--output-directory") {
 			if (index + 1 >= argc) {
-				std::cout << "No arguments have been provided for " << command << ".\n";
+				std::cout << "No arguments have been provided for " << option << ".\n";
 				return;
 			}
 			std::filesystem::path dir(argv[index + 1]);
@@ -563,7 +563,7 @@ void Application::CreateAtlasFromCmdLine(int argc, char** argv)
 			++index;
 		}
 		else {
-			std::cout << command << " is not a valid command.";
+			std::cout << option << " is not a valid option.";
 		}
 
 		++index;
