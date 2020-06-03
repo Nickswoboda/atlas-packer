@@ -30,8 +30,6 @@ public:
 	void Run();
 	void Render();
 
-	std::string TestFolder(const std::string& folder);
-	void Test();
 	void RenderInputState();
 	void RenderOutputState();
 	void RenderSettingsMenu();

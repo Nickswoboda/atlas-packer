@@ -2,15 +2,7 @@
 
 set (CMAKE_CXX_STANDARD 17)
 
-project ("Atlas")
-
-IF(WIN32)
-IF(CMAKE_BUILD_TYPE MATCHES Release)
-set(CMAKE_CREATE_WIN32_EXE "/SUBSYSTEM:WINDOWS /ENTRY:\"mainCRTStartup\"")
-ELSE()
-set(CMAKE_CREATE_WIN32_EXE "/SUBSYSTEM:CONSOLE")
-ENDIF(CMAKE_BUILD_TYPE MATCHES Release)
-ENDIF(WIN32)
+project ("AtlasPacker")
 
 set (src 	"src/main.cpp"
 	"src/Application.cpp"
@@ -23,12 +15,12 @@ set (src 	"src/main.cpp"
 	"dependencies/imgui/imgui_impl_glfw.cpp"
 	"dependencies/imgui/imgui_impl_opengl3.cpp"
 	"dependencies/imgui/imgui_widgets.cpp"
- "src/ImageData.cpp" "src/AtlasPacker.cpp")
+ "src/ImageData.cpp" "src/AtlasPacker.cpp" "src/MaxRects.cpp")
 
-add_executable (Atlas WIN32
-	${src} "src/MaxRects.cpp")
+add_executable (AtlasPacker
+	${src})
 
-target_include_directories(Atlas
+target_include_directories(AtlasPacker
 PUBLIC
 	"dependencies/GLFW/include"
 	"dependencies/GLAD/include"
@@ -37,5 +29,5 @@ PUBLIC
 
 add_subdirectory("dependencies/GLFW")
 
-target_link_libraries(Atlas glfw)
+target_link_libraries(AtlasPacker glfw)
 file(COPY assets DESTINATION ${CMAKE_BINARY_DIR})

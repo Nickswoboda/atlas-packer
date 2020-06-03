@@ -117,66 +117,6 @@ void Application::Render()
 	glfwSwapBuffers(window_.glfw_window_);
 }
 
-std::string Application::TestFolder(const std::string& folder)
-{
-	input_items_.clear();
-	input_items_.insert(folder);
-	UnpackInputFolders();
-	GetImageData(unpacked_items_, image_data_);
-
-	std::string result = "folder: ";
-	result += folder +'\n';
-	atlas_packer_.algo_ = Algorithm::MaxRects;
-
-	result += "Size: Fast \n";
-	atlas_packer_.size_solver_ = SizeSolver::Fast;
-
-	double avg_time = 0.0;
-
-	for (int i = 0; i < 5; ++i) {
-		atlas_index_ = atlas_packer_.CreateAtlas(image_data_);
-		avg_time += atlas_packer_.stats_.time_elapsed_in_ms;
-	}
-
-	avg_time /= 5;
-
-	result += std::to_string(atlas_packer_.stats_.packing_efficiency) + "%   ";
-	result += std::to_string(avg_time) + " ms\n";
-
-	result += "Size: Best Fit \n";
-	atlas_packer_.size_solver_ = SizeSolver::BestFit;
-
-	avg_time = 0.0;
-
-	for (int i = 0; i < 5; ++i) {
-		atlas_index_ = atlas_packer_.CreateAtlas(image_data_);
-		avg_time += atlas_packer_.stats_.time_elapsed_in_ms;
-	}
-
-	avg_time /= 5;
-
-	result += std::to_string(atlas_packer_.stats_.packing_efficiency) + "%   ";
-	result += std::to_string(avg_time) + " ms\n\n";
-
-	unpacked_items_.clear();
-	return result;
-
-}
-
-void Application::Test()
-{
-	std::string results;
-
-	results += TestFolder("C:/images");
-	results += TestFolder("C:/images2");
-	results += TestFolder("C:/images3");
-	results += TestFolder("C:/images4");
-	results += TestFolder("C:/images5");
-
-	std::ofstream file("C:/images/test.txt");
-	file << results << std::endl;
-}
-
 void Application::RenderInputState()
 {
 	input_file_dialog_.Render();
@@ -422,9 +362,6 @@ void Application::RenderSettingsMenu()
 	}
 	ImGui::PopItemWidth();
 
-	if (ImGui::Button("Run Test")) {
-		Test();
-	}
 	if (ImGui::Button("Return")) {
 		PopState();
 	}
@@ -506,10 +443,10 @@ void Application::CreateAtlasFromCmdLine(int argc, char** argv)
 	}
 
 	while (index < argc) {
-		std::string option = argv[index];
-		if (option == "-a") {
+		std::string command = argv[index];
+		if (command == "-a" || command == "-algorithm") {
 			if (index + 1 >= argc) {
-				std::cout << "no arguments have been provided for " << option << "\n";
+				std::cout << "No arguments have been provided for " << command << "\n";
 				return;
 			}
 			std::string arg = argv[index + 1];
@@ -521,12 +458,12 @@ void Application::CreateAtlasFromCmdLine(int argc, char** argv)
 				std::cout << arg << " is not a valid algorithm\n";
 				return;
 			}
-			//additonal increment to use up of arg
+			//additonal increment to go past arg and get to next option
 			++index;
 		}
-		else if (option == "-ss") {
+		else if (command == "-ss" || command == "-size-solver") {
 			if (index + 1 >= argc) {
-				std::cout << "no arguments have been provided for " << option << "\n";
+				std::cout << "No arguments have been provided for " << command << ".\n";
 				return;
 			}
 			std::string arg = argv[index + 1];
@@ -540,42 +477,42 @@ void Application::CreateAtlasFromCmdLine(int argc, char** argv)
 				atlas_packer_.size_solver_ = SizeSolver::BestFit;
 			}
 			else {
-				std::cout << arg << " is not a valid size solver\n";
+				std::cout << arg << " is not a valid size solver.\n";
 				return;
 			}
 			++index;
 		}
-		else if (option == "-p") {
+		else if (command == "-p" || command == "-padding") {
 			if (index + 1 >= argc) {
-				std::cout << "no arguments have been provided for " << option << "\n";
+				std::cout << "No arguments have been provided for " << command << ".\n";
 				return;
 			}
 			if (!IsNumber(argv[index + 1])) {
-				std::cout << argv[index + 1] << " is not a valid number\n";
+				std::cout << argv[index + 1] << " is not a valid number.\n";
 				return;
 			}
 			int padding = std::stoi(argv[index + 1]);
 			if (padding > 32) {
-				std::cout << "The maximum pixel padding allowed is 32\n";
+				std::cout << "The maximum pixel padding allowed is 32.\n";
 				return;
 			}
 			atlas_packer_.pixel_padding_ = padding;
 			++index;
 		}
-		else if (option == "-d") {
+		else if (command == "-d" || command == "-dimensions") {
 			if (index + 1 >= argc || index + 2 >= argc) {
-				std::cout << "no arguments have been provided for " << option << "\n";
+				std::cout << "No arguments have been provided for " << command << ".\n";
 				return;
 			}
 			if (!IsNumber(argv[index + 1]) || !IsNumber(argv[index + 2])) {
-				std::cout << argv[index + 1] << "x" << argv[index+2] << " is not a valid size\n";
+				std::cout << argv[index + 1] << "x" << argv[index+2] << " is not a valid size.\n";
 				return;
 			}
 
 			int width = std::stoi(argv[index + 1]);
 			int height = std::stoi(argv[index + 2]);
 			if (width > 4096 || height > 4096) {
-				std::cout << "The maximum dimensions are 4096x4096\n";
+				std::cout << "The maximum dimensions are 4096x4096.\n";
 				return;
 			}
 
@@ -584,21 +521,21 @@ void Application::CreateAtlasFromCmdLine(int argc, char** argv)
 			//additonal increment to use up both arg
 			index +=2 ;
 		}
-		else if (option == "-fs") {
+		else if (command == "-fs" || command == "-force-square") {
 			atlas_packer_.force_square_ = true;
 			if (atlas_packer_.size_solver_ == SizeSolver::Fixed) {
-				std::cout << "Forced Square is ignored for fixed size atlases\n";
+				std::cout << "Forced Square is ignored for fixed size atlases.\n";
 			}
 		}
-		else if (option == "-pot") {
+		else if (command == "-pot" || command == "-power-of-two") {
 			atlas_packer_.pow_of_2_ = true;
 			if (atlas_packer_.size_solver_ == SizeSolver::Fixed) {
-				std::cout << "Power of 2 is ignored for fixed size atlases\n";
+				std::cout << "Power of 2 is ignored for fixed size atlases.\n";
 			}
 		}
-		else if (option == "-of") {
+		else if (command == "-of" || command == "-output-format") {
 			if (index + 1 >= argc) {
-				std::cout << "no arguments have been provided for " << option << "\n";
+				std::cout << "No arguments have been provided for " << command << ".\n";
 				return;
 			}
 			std::string arg = argv[index + 1];
@@ -607,13 +544,13 @@ void Application::CreateAtlasFromCmdLine(int argc, char** argv)
 			}
 			//png is default
 			else if (arg != "png") {
-				std::cout << arg << " is not a valid file format\n";
+				std::cout << arg << " is not a valid file format.\n";
 			}
 
 		}
-		else if (option == "-od") {
+		else if (command == "-od" || command == "-output-directory") {
 			if (index + 1 >= argc) {
-				std::cout << "no arguments have been provided for " << option << "\n";
+				std::cout << "No arguments have been provided for " << command << ".\n";
 				return;
 			}
 			std::filesystem::path dir(argv[index + 1]);
@@ -621,20 +558,26 @@ void Application::CreateAtlasFromCmdLine(int argc, char** argv)
 				save_folder_path_ = dir.generic_u8string();
 			}
 			else {
-				std::cout << argv[index + 1] << "is not a valid directory\n";
+				std::cout << argv[index + 1] << "is not a valid directory.\n";
 			}
 			++index;
 		}
 		else {
-			std::cout << option << " is an invalid command\n";
+			std::cout << command << " is not a valid command.";
 		}
 
 		++index;
 	}
 
+	//if exited out of parsing early due to errors
+	if (index != argc) {
+		std::cout << "Try 'AtlasPacker.exe --help' for more information.\n";
+	}
+
 	UnpackInputFolders();
 	if (unpacked_items_.empty()) {
 		std::cout << "No valid textures found.\n";
+		std::cout << "Try 'AtlasPacker.exe --help' for more information.\n";
 		return;
 	}
 
@@ -642,11 +585,16 @@ void Application::CreateAtlasFromCmdLine(int argc, char** argv)
 	atlas_index_ = atlas_packer_.CreateAtlas(image_data_);
 	Save(save_folder_path_);
 
-	std::cout << "Atlas creation complete\n" <<
+	if (atlas_index_ == -1) {
+		std::cout << "Unable to create atlas with the current settings. Please try again.\n";
+		return;
+	}
+
+	std::cout << "Atlas creation complete.\n" <<
 		"Time to pack: " << atlas_packer_.stats_.time_elapsed_in_ms << "ms\n" <<
 		"Unused area:  " << atlas_packer_.stats_.unused_area << "px\n" <<
 		"Packing efficiency: " << std::fixed << std::setprecision(2) << atlas_packer_.stats_.packing_efficiency << "%\n";
-	std::cout << "Atlas saved to " << save_folder_path_ << "\n";
+	std::cout << "Atlas saved to " << save_folder_path_ << ".\n";
 }
 
 bool Application::IsNumber(const std::string& value)

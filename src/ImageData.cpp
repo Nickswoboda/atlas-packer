@@ -8,13 +8,17 @@
 
 void GetImageData(const std::vector<std::string>& paths, ImageData& image_data)
 {
+
+	//clear previous image data
+	for (int i = 0; i < image_data.num_images_; ++i) {
+		if (image_data.data_[i] != nullptr) {
+			stbi_image_free(image_data.data_[i]);
+		}
+	}
+
 	image_data.num_images_ = 0;
 
 	for (int i = 0; i < paths.size(); ++i) {
-
-		if (image_data.data_[i] != nullptr){
-			stbi_image_free(image_data.data_[i]);
-		}
 
 		image_data.data_[i] = stbi_load(paths[i].c_str(), &image_data.rects_[i].w, &image_data.rects_[i].h, nullptr, 4);
 
