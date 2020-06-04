@@ -27,7 +27,7 @@ Application::Application(int width, int height)
 	ImGuiIO& io = ImGui::GetIO(); (void)io;
 
 	if (std::filesystem::exists("assets/fonts/Roboto-Medium.ttf")) {
-		io.Fonts->AddFontFromFileTTF("assets/fonts/Roboto-Medium.ttf", font_size_);
+		io.Fonts->AddFontFromFileTTF("assets/fonts/Roboto-Medium.ttf", 16);
 	}
 
 	ImGui_ImplGlfw_InitForOpenGL(window_.glfw_window_, true);
@@ -54,23 +54,11 @@ Application::~Application()
 
 void Application::Run()
 {
-	while (!glfwWindowShouldClose(window_.glfw_window_) && running_)
-	{
+	while (!glfwWindowShouldClose(window_.glfw_window_) && running_){
 		glfwPollEvents();
 
 		if (Window::IsFocused()) {
 			Render();
-		}
-
-		//Must change font outside of ImGui Rendering
-		if (font_size_changed_) {
-			font_size_changed_ = false;
-
-			ImGuiIO& io = ImGui::GetIO();
-			delete io.Fonts;
-			io.Fonts = new ImFontAtlas();
-			io.Fonts->AddFontFromFileTTF("assets/fonts/Roboto-Medium.ttf", font_size_);
-			ImGui_ImplOpenGL3_CreateFontsTexture();
 		}
 	}
 
@@ -90,14 +78,6 @@ void Application::Render()
 	switch (state_stack_.top()) {
 		case State::Input: RenderInputState(); break;
 		case State::Output: RenderOutputState(); break;
-		case State::Settings: RenderSettingsMenu(); break;
-	}
-
-	if (state_stack_.top() != State::Settings) {
-		ImGui::SameLine(100);
-		if (ImGui::Button("Settings")) {
-			PushState(State::Settings);
-		}
 	}
 
 	//move base transparent window when moving ImGui window
@@ -343,26 +323,6 @@ void Application::RenderOutputState()
 
 	if (ImGui::Button("Try Again")) {
 		unpacked_items_.clear();
-		PopState();
-	}
-}
-
-void Application::RenderSettingsMenu()
-{
-	ImGui::TextWrapped("Font Size");
-	ImGui::PushItemWidth(window_.width_);
-	if (ImGui::DragInt("##font", &font_size_, 1.0f, 10, 32)) {
-		font_size_changed_ = true;
-	}
-	ImGui::TextWrapped("Window Width");
-	if (ImGui::DragInt("##width", &window_.width_, 1.0f, 100, 1024)) {
-		window_.UpdateSize();
-		input_file_dialog_.width_ = window_.width_ / 2;
-		save_file_dialog_.width_ = window_.width_ / 2;
-	}
-	ImGui::PopItemWidth();
-
-	if (ImGui::Button("Return")) {
 		PopState();
 	}
 }

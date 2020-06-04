@@ -32,7 +32,6 @@ public:
 
 	void RenderInputState();
 	void RenderOutputState();
-	void RenderSettingsMenu();
 	void ImGuiErrorText(const std::string& error);
 
 	void PushState(State state);
@@ -46,9 +45,6 @@ public:
 
 private:
 	bool running_ = true;
-
-	int font_size_= 16;
-	bool font_size_changed_ = false;
 
 	AtlasPacker atlas_packer_;
 	ImageData image_data_;
