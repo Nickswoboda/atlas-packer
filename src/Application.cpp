@@ -39,7 +39,7 @@ Application::Application(int width, int height)
 
 	state_stack_.push(State::Input);
 
-	save_folder_path_ = std::filesystem::current_path().u8string();
+	output_directory_ = std::filesystem::current_path().u8string();
 }
 
 Application::~Application()
@@ -275,7 +275,7 @@ void Application::RenderOutputState()
 	ImGui::PushItemWidth(200);
 
 	ImGui::Separator();
-	ImGui::Text("Save Folder Path: %s", save_folder_path_.c_str());
+	ImGui::Text("Save Folder Path: %s", output_directory_.c_str());
 	ImGui::SameLine();
 	if (ImGui::Button("Change")){
 		changing_save_folder_ = true;
@@ -291,33 +291,33 @@ void Application::RenderOutputState()
 		ImGui::SameLine();
 		if (ImGui::Button("Select")) {
 			if (std::filesystem::is_directory(save_file_dialog_.selected_path_)) {
-				save_folder_path_ = save_file_dialog_.selected_path_;
+				output_directory_ = save_file_dialog_.selected_path_;
 				changing_save_folder_ = false;
 			}
 		}
 	}
 
 	ImGui::Text("Save File Format:"); ImGui::SameLine(120);
-	if (ImGui::BeginCombo("##SaveFormat", save_file_format_ == SaveFileFormat::PNG ? ".png" : ".jpg")) {
+	if (ImGui::BeginCombo("##SaveFormat", output_format_ == OutputFormat::PNG ? ".png" : ".jpg")) {
 		if (ImGui::Selectable(".png")) {
-			save_file_format_ = SaveFileFormat::PNG;
+			output_format_ = OutputFormat::PNG;
 		}
 		else if (ImGui::Selectable(".jpg")) {
-			save_file_format_ = SaveFileFormat::JPG;
+			output_format_ = OutputFormat::JPG;
 		}
 		ImGui::EndCombo();
 	}
 
-	if (save_file_format_ == SaveFileFormat::JPG) {
+	if (output_format_ == OutputFormat::JPG) {
 		ImGui::Text("JPG quality level: "); ImGui::SameLine();
 		ImGui::SliderInt("##jpgquality", &jpg_quality_, 1, 100);
 	}
 
-	if (save_folder_path_.empty()) {
+	if (output_directory_.empty()) {
 		ImGuiErrorText("You must choose a save destination folder");
 	}
-	if (ImGui::Button("Save") && !save_folder_path_.empty()) {
-		Save(save_folder_path_);
+	if (ImGui::Button("Save") && !output_directory_.empty()) {
+		Save(output_directory_);
 	}
 	ImGui::Separator();
 
@@ -359,7 +359,7 @@ void Application::Save(const std::string& save_folder)
 {
 	int success;
 
-	if (save_file_format_ == SaveFileFormat::PNG) {
+	if (output_format_ == OutputFormat::PNG) {
 		std::string full_path(save_folder + "/atlas.png");
 		success = stbi_write_png(full_path.c_str(), image_data_.rects_[atlas_index_].w, image_data_.rects_[atlas_index_].h, 4, (void*)image_data_.data_[atlas_index_], image_data_.rects_[atlas_index_].w * 4);
 	}
@@ -500,7 +500,7 @@ void Application::CreateAtlasFromCmdLine(int argc, char** argv)
 			}
 			std::string arg = argv[index + 1];
 			if (arg == "jpg") {
-				save_file_format_ = SaveFileFormat::JPG;
+				output_format_ = OutputFormat::JPG;
 			}
 			//png is default
 			else if (arg != "png") {
@@ -515,7 +515,7 @@ void Application::CreateAtlasFromCmdLine(int argc, char** argv)
 			}
 			std::filesystem::path dir(argv[index + 1]);
 			if (std::filesystem::is_directory(dir)){
-				save_folder_path_ = dir.generic_u8string();
+				output_directory_ = dir.generic_u8string();
 			}
 			else {
 				std::cout << argv[index + 1] << "is not a valid directory.\n";
@@ -543,7 +543,7 @@ void Application::CreateAtlasFromCmdLine(int argc, char** argv)
 
 	GetImageData(unpacked_items_, image_data_);
 	atlas_index_ = atlas_packer_.CreateAtlas(image_data_);
-	Save(save_folder_path_);
+	Save(output_directory_);
 
 	if (atlas_index_ == -1) {
 		std::cout << "Unable to create atlas with the current settings. Please try again.\n";
@@ -554,7 +554,7 @@ void Application::CreateAtlasFromCmdLine(int argc, char** argv)
 		"Time to pack: " << atlas_packer_.stats_.time_elapsed_in_ms << "ms\n" <<
 		"Unused area:  " << atlas_packer_.stats_.unused_area << "px\n" <<
 		"Packing efficiency: " << std::fixed << std::setprecision(2) << atlas_packer_.stats_.packing_efficiency << "%\n";
-	std::cout << "Atlas saved to " << save_folder_path_ << ".\n";
+	std::cout << "Atlas saved to " << output_directory_ << ".\n";
 }
 
 bool Application::IsNumber(const std::string& value)

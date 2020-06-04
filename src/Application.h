@@ -17,7 +17,7 @@ public:
 		Output,
 		Settings
 	};
-	enum class SaveFileFormat {
+	enum class OutputFormat {
 		PNG,
 		JPG
 	};
@@ -55,11 +55,11 @@ private:
 	FileDialog save_file_dialog_;
 	int jpg_quality_ = 90;
 
-	std::string save_folder_path_;
+	std::string output_directory_;
 	bool changing_save_folder_ = false;
 	bool max_images_exceeded_ = false;
 
-	SaveFileFormat save_file_format_ = SaveFileFormat::PNG;
+	OutputFormat output_format_ = OutputFormat::PNG;
 
 	std::unordered_set<std::string> input_items_;
 	std::vector<std::string> unpacked_items_;
